@@ -1,0 +1,229 @@
+{
+  "app_name": "Ironman 70.3 Training Championship",
+  "purpose": "Gamified HR-zone-based Strava competition for Ironman 70.3 training (Jan 1, 2026 – Mar 31, 2026).",
+  "competition_window": {
+    "start_utc": "2026-01-01T00:00:00Z",
+    "end_utc": "2026-03-31T23:59:59Z"
+  },
+  "tech_stack": {
+    "frontend": {
+      "framework": "Next.js (React)",
+      "hosting": "Vercel",
+      "features": [
+        "Public leaderboard view",
+        "Per-athlete performance dashboard",
+        "Filter by date, athlete, sport type",
+        "Admin-only simple config view (optional)"
+      ]
+    },
+    "backend": {
+      "type": "serverless",
+      "options": [
+        "Vercel API Routes",
+        "Supabase Edge Functions"
+      ],
+      "responsibilities": [
+        "Handle Strava webhooks",
+        "Fetch full activity and HR data from Strava API",
+        "Normalize and upsert data into Supabase tables",
+        "Optionally precompute and store per-activity points"
+      ]
+    },
+    "database": {
+      "provider": "Supabase (PostgreSQL)",
+      "usage": [
+        "Persist athletes",
+        "Persist activities",
+        "Persist heart rate zone breakdowns",
+        "Store precomputed competition points and rollups",
+        "Store competition config (start/end dates, status)"
+      ]
+    },
+    "external_apis": {
+      "strava": {
+        "usage": [
+          "Athlete authorization (OAuth2)",
+          "Webhook subscription for activity events",
+          "Activity detail retrieval",
+          "Heart rate / streams retrieval"
+        ]
+      }
+    }
+  },
+  "data_flow": [
+    {
+      "step": 1,
+      "name": "Athlete records workout in Strava",
+      "details": "Any supported sport with heart rate data (Swim, Ride, Run, etc.)."
+    },
+    {
+      "step": 2,
+      "name": "Strava sends webhook event",
+      "details": "Strava POSTs to /api/strava/webhook when activity is created/updated."
+    },
+    {
+      "step": 3,
+      "name": "Backend fetches full activity data",
+      "details": "Serverless function calls Strava API to fetch activity summary + HR streams."
+    },
+    {
+      "step": 4,
+      "name": "Normalize and persist to Supabase",
+      "details": "Upsert athlete, activity, and heart_rate_zones rows. Compute and store zone_points per activity."
+    },
+    {
+      "step": 5,
+      "name": "Frontend queries Supabase",
+      "details": "Leaderboard and dashboards query Postgres views or aggregation tables, filtered by competition_window."
+    }
+  ],
+  "data_model": {
+    "tables": {
+      "athletes": {
+        "description": "Strava-connected athletes participating in the competition.",
+        "columns": {
+          "id": "uuid PRIMARY KEY",
+          "strava_athlete_id": "bigint UNIQUE NOT NULL",
+          "firstname": "text",
+          "lastname": "text",
+          "profile_image_url": "text",
+          "created_at": "timestamptz DEFAULT now()"
+        }
+      },
+      "activities": {
+        "description": "Raw Strava activities plus key summary fields.",
+        "columns": {
+          "id": "uuid PRIMARY KEY",
+          "strava_activity_id": "bigint UNIQUE NOT NULL",
+          "athlete_id": "uuid REFERENCES athletes(id)",
+          "name": "text",
+          "sport_type": "text",
+          "start_date": "timestamptz",
+          "distance_m": "numeric",
+          "moving_time_s": "integer",
+          "elapsed_time_s": "integer",
+          "average_heartrate": "numeric",
+          "max_heartrate": "numeric",
+          "average_speed_mps": "numeric",
+          "total_elevation_gain_m": "numeric",
+          "zone_points": "numeric",
+          "in_competition_window": "boolean",
+          "raw_payload": "jsonb",
+          "created_at": "timestamptz DEFAULT now()",
+          "updated_at": "timestamptz DEFAULT now()"
+        }
+      },
+      "heart_rate_zones": {
+        "description": "Per-activity duration spent in each HR zone.",
+        "columns": {
+          "id": "uuid PRIMARY KEY",
+          "activity_id": "uuid REFERENCES activities(id) ON DELETE CASCADE",
+          "zone_1_time_s": "integer DEFAULT 0",
+          "zone_2_time_s": "integer DEFAULT 0",
+          "zone_3_time_s": "integer DEFAULT 0",
+          "zone_4_time_s": "integer DEFAULT 0",
+          "zone_5_time_s": "integer DEFAULT 0",
+          "created_at": "timestamptz DEFAULT now()"
+        }
+      },
+      "competition_config": {
+        "description": "Defines active competition windows and settings.",
+        "columns": {
+          "id": "uuid PRIMARY KEY",
+          "name": "text",
+          "start_date": "timestamptz",
+          "end_date": "timestamptz",
+          "is_active": "boolean DEFAULT true",
+          "created_at": "timestamptz DEFAULT now()"
+        },
+        "initial_row": {
+          "name": "Ironman 70.3 Training Championship 2026",
+          "start_date": "2026-01-01T00:00:00Z",
+          "end_date": "2026-03-31T23:59:59Z",
+          "is_active": true
+        }
+      }
+    },
+    "views_or_rollups": {
+      "leaderboard_points_view": {
+        "description": "Aggregated points per athlete within active competition window.",
+        "logic": "SELECT athlete_id, SUM(zone_points) AS total_points, COUNT(*) AS activity_count FROM activities WHERE in_competition_window = true GROUP BY athlete_id;"
+      }
+    }
+  },
+  "scoring_logic": {
+    "based_on": "Heart rate zones per activity (time spent in each zone).",
+    "zone_weights": {
+      "zone_1": 1,
+      "zone_2": 2,
+      "zone_3": 3,
+      "zone_4": 4,
+      "zone_5": 5
+    },
+    "per_activity_formula": "zone_points = (zone_1_time_s/60)*1 + (zone_2_time_s/60)*2 + (zone_3_time_s/60)*3 + (zone_4_time_s/60)*4 + (zone_5_time_s/60)*5",
+    "competition_total_formula": "athlete_total_points = SUM(zone_points) for all activities within competition_window."
+  },
+  "backend_endpoints": {
+    "public": [
+      {
+        "route": "/api/leaderboard",
+        "method": "GET",
+        "description": "Returns leaderboard standings for competition window.",
+        "source": "Supabase leaderboard_points_view + athlete names."
+      },
+      {
+        "route": "/api/athlete/:id/summary",
+        "method": "GET",
+        "description": "Returns per-athlete stats (points, activities, breakdown by sport)."
+      }
+    ],
+    "strava_webhook": [
+      {
+        "route": "/api/strava/webhook",
+        "method": "GET",
+        "description": "Webhook verification endpoint required by Strava.",
+        "notes": "Respond with hub.challenge when verifying subscription."
+      },
+      {
+        "route": "/api/strava/webhook",
+        "method": "POST",
+        "description": "Receives Strava event notifications (activity created/updated).",
+        "handler_steps": [
+          "Validate event signature (if configured).",
+          "Inspect object_type == 'activity' and aspect_type in ['create', 'update'].",
+          "Queue or directly call Strava API to fetch activity details.",
+          "Compute HR zone times and zone_points.",
+          "Upsert into Supabase tables.",
+          "Set in_competition_window based on competition_window dates."
+        ]
+      }
+    ]
+  },
+  "frontend_pages": [
+    {
+      "route": "/",
+      "description": "Main leaderboard page; shows top athletes, total points, and date filters."
+    },
+    {
+      "route": "/athlete/[id]",
+      "description": "Per-athlete view: history, weekly summaries, HR zone distribution."
+    },
+    {
+      "route": "/about",
+      "description": "Competition overview and technical system explanation."
+    }
+  ],
+  "cost_strategy": {
+    "goal": "Stay on free tiers where possible.",
+    "choices": [
+      "Supabase free tier for Postgres + small row volume.",
+      "Vercel free tier for static pages + light serverless functions.",
+      "Strava API usage within rate limits via webhook-driven updates."
+    ],
+    "optimizations": [
+      "Precompute zone_points and store per activity to avoid heavy aggregation.",
+      "Limit verbose logging in database.",
+      "Use views or materialized views for leaderboard queries."
+    ]
+  }
+}
