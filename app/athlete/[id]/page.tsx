@@ -10,6 +10,13 @@ interface AthleteData {
     firstname: string;
     lastname: string;
     profile_image_url: string | null;
+    hr_zones?: {
+      custom_zones: boolean;
+      zones: Array<{
+        min: number;
+        max: number;
+      }>;
+    } | null;
   };
   summary: {
     total_points: number;
@@ -226,6 +233,31 @@ export default function AthletePage() {
           </p>
         </div>
 
+        {/* HR Zone Configuration (from Strava) */}
+        {data.athlete.hr_zones && (
+          <div className="card p-6 mb-8 bg-gradient-to-r from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 border-blue-200 dark:border-blue-800">
+            <h3 className="text-lg font-bold mb-4 text-blue-900 dark:text-blue-100">
+              Strava Heart Rate Zones Configuration
+            </h3>
+            <div className="mb-3">
+              <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 rounded-full text-sm font-semibold">
+                {data.athlete.hr_zones.custom_zones ? 'Custom Zones' : 'Auto Zones'}
+              </span>
+            </div>
+            <div className="grid grid-cols-5 gap-3">
+              {data.athlete.hr_zones.zones.map((zone, index) => (
+                <div key={index} className="bg-white dark:bg-slate-800 p-3 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                  <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Zone {index + 1}</div>
+                  <div className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100">
+                    {zone.min} - {zone.max}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-slate-400">bpm</div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* HR Zone Distribution */}
         <div className="card p-8 mb-8">
           <h2 className="text-2xl font-bold mb-6 gradient-text">Heart Rate Zone Distribution</h2>
@@ -234,11 +266,19 @@ export default function AthletePage() {
               const zoneKey = `zone_${zone}` as keyof typeof data.zone_distribution;
               const percentage = zonePercentages[zoneKey];
               const timeMinutes = Math.floor(data.zone_distribution[zoneKey] / 60);
+              const hrZone = data.athlete.hr_zones?.zones[zone - 1];
 
               return (
                 <div key={zone}>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-slate-700 dark:text-slate-300">Zone {zone}</span>
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">
+                      Zone {zone}
+                      {hrZone && (
+                        <span className="ml-2 text-xs font-mono text-slate-500 dark:text-slate-400">
+                          ({hrZone.min}-{hrZone.max} bpm)
+                        </span>
+                      )}
+                    </span>
                     <span className="text-sm text-slate-600 dark:text-slate-400">
                       {timeMinutes} min ({percentage.toFixed(1)}%)
                     </span>

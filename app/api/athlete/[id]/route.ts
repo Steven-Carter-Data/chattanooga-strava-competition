@@ -98,6 +98,7 @@ export async function GET(
           firstname: athlete.firstname,
           lastname: athlete.lastname,
           profile_image_url: athlete.profile_image_url,
+          hr_zones: athlete.hr_zones || null,
         },
         summary: {
           total_points: totalPoints,

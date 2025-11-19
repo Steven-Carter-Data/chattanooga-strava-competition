@@ -47,6 +47,17 @@ export async function POST(
       console.warn('Could not fetch athlete HR zones from Strava, will use fallback calculation');
     } else {
       console.log('Athlete HR zones:', athleteZones.heart_rate.custom_zones ? 'Custom' : 'Auto', athleteZones.heart_rate.zones);
+
+      // Store HR zones in athlete record for verification
+      await supabaseAdmin
+        .from('athletes')
+        .update({
+          hr_zones: {
+            custom_zones: athleteZones.heart_rate.custom_zones,
+            zones: athleteZones.heart_rate.zones,
+          },
+        })
+        .eq('id', athleteId);
     }
 
     // Get competition config
