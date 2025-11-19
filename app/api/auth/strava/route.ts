@@ -18,7 +18,7 @@ export async function GET(request: NextRequest) {
   authUrl.searchParams.append('redirect_uri', redirectUri);
   authUrl.searchParams.append('response_type', 'code');
   authUrl.searchParams.append('scope', scope);
-  authUrl.searchParams.append('approval_prompt', 'auto');
+  authUrl.searchParams.append('approval_prompt', 'force');
 
   return NextResponse.redirect(authUrl.toString());
 }

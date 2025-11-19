@@ -7,6 +7,7 @@ interface StravaTokenResponse {
   expires_in: number;
   refresh_token: string;
   access_token: string;
+  scope?: string;
   athlete: {
     id: number;
     username: string | null;
@@ -81,6 +82,8 @@ export async function GET(request: NextRequest) {
     // Store tokens
     const expiresAt = new Date(tokenData.expires_at * 1000).toISOString();
 
+    console.log('Storing tokens with scope:', tokenData.scope || 'activity:read_all,read');
+
     const { error: tokenError } = await supabaseAdmin
       .from('athlete_tokens')
       .upsert(
@@ -89,7 +92,7 @@ export async function GET(request: NextRequest) {
           access_token: tokenData.access_token,
           refresh_token: tokenData.refresh_token,
           expires_at: expiresAt,
-          scope: 'activity:read_all,read',
+          scope: tokenData.scope || 'activity:read_all,read',
         },
         { onConflict: 'athlete_id' }
       );

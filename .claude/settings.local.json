@@ -15,7 +15,8 @@
       "Bash(nul)",
       "Bash(vercel:*)",
       "Bash(npx vercel --prod)",
-      "Bash(git init:*)"
+      "Bash(git init:*)",
+      "Bash(echo:*)"
     ],
     "deny": [],
     "ask": []

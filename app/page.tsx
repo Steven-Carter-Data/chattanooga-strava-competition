@@ -75,11 +75,17 @@ function HomeContent() {
           }, 2000);
         }, 2000);
       } else {
+        // Show detailed error information
+        const errorMsg = result.details
+          ? `${result.error} (${result.details})`
+          : result.error;
         setSyncMessages(prev => {
           const newMap = new Map(prev);
-          newMap.set(athleteId, `Sync failed: ${result.error}`);
+          newMap.set(athleteId, `Sync failed: ${errorMsg}`);
           return newMap;
         });
+        // Log full error details to console for debugging
+        console.error('Sync error details:', result);
       }
     } catch (err) {
       setSyncMessages(prev => {
