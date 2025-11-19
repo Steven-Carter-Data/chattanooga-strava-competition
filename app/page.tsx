@@ -5,6 +5,8 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LeaderboardEntry } from '@/lib/types';
 
+// Leaderboard with sync buttons for each athlete
+
 function HomeContent() {
   const searchParams = useSearchParams();
   const success = searchParams.get('success');
