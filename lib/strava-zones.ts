@@ -70,14 +70,16 @@ export function calculateHRZonesWithCustomBoundaries(
     const duration = timeData[i + 1] - timeData[i]; // seconds between readings
 
     // Determine which zone this HR falls into
-    // Strava zones: Zone 1 (0-5), Zone 2 (1-2), Zone 3 (2-3), Zone 4 (3-4), Zone 5 (4-5)
-    if (hr >= zones[0].min && hr <= zones[0].max) {
+    // Use < for upper bound to avoid double-counting boundary values
+    // Strava zones typically have overlapping boundaries (e.g., Zone 1: 0-138, Zone 2: 138-155)
+    // We count a boundary value in the higher zone
+    if (hr >= zones[0].min && hr < zones[1].min) {
       zoneTimes.zone_1 += duration;
-    } else if (hr >= zones[1].min && hr <= zones[1].max) {
+    } else if (hr >= zones[1].min && hr < zones[2].min) {
       zoneTimes.zone_2 += duration;
-    } else if (hr >= zones[2].min && hr <= zones[2].max) {
+    } else if (hr >= zones[2].min && hr < zones[3].min) {
       zoneTimes.zone_3 += duration;
-    } else if (hr >= zones[3].min && hr <= zones[3].max) {
+    } else if (hr >= zones[3].min && hr < zones[4].min) {
       zoneTimes.zone_4 += duration;
     } else if (hr >= zones[4].min && hr <= zones[4].max) {
       zoneTimes.zone_5 += duration;
