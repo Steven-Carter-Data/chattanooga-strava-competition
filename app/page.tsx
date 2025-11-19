@@ -13,6 +13,8 @@ function HomeContent() {
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncingAthletes, setSyncingAthletes] = useState<Set<string>>(new Set());
+  const [syncMessages, setSyncMessages] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     async function fetchLeaderboard() {
@@ -31,6 +33,67 @@ function HomeContent() {
 
     fetchLeaderboard();
   }, []);
+
+  async function handleSyncAthlete(athleteId: string) {
+    setSyncingAthletes(prev => new Set(prev).add(athleteId));
+    setSyncMessages(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(athleteId);
+      return newMap;
+    });
+
+    try {
+      const response = await fetch(`/api/sync/${athleteId}`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        setSyncMessages(prev => {
+          const newMap = new Map(prev);
+          newMap.set(athleteId, `Synced ${result.synced} activities!`);
+          return newMap;
+        });
+
+        // Refresh leaderboard after 2 seconds
+        setTimeout(async () => {
+          const response = await fetch('/api/leaderboard');
+          const data = await response.json();
+          if (data.success) {
+            setLeaderboard(data.data);
+          }
+
+          // Clear message after another 2 seconds
+          setTimeout(() => {
+            setSyncMessages(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(athleteId);
+              return newMap;
+            });
+          }, 2000);
+        }, 2000);
+      } else {
+        setSyncMessages(prev => {
+          const newMap = new Map(prev);
+          newMap.set(athleteId, `Sync failed: ${result.error}`);
+          return newMap;
+        });
+      }
+    } catch (err) {
+      setSyncMessages(prev => {
+        const newMap = new Map(prev);
+        newMap.set(athleteId, 'Sync failed');
+        return newMap;
+      });
+      console.error(err);
+    } finally {
+      setSyncingAthletes(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(athleteId);
+        return newSet;
+      });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
@@ -149,50 +212,86 @@ function HomeContent() {
                     <th className="text-left py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Athlete</th>
                     <th className="text-right py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Points</th>
                     <th className="text-right py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Activities</th>
+                    <th className="text-center py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leaderboard.map((entry, index) => (
-                    <tr
-                      key={entry.athlete_id}
-                      className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
-                    >
-                      <td className="py-4 px-8">
-                        <div className="flex items-center">
-                          {index === 0 && <span className="text-3xl">🥇</span>}
-                          {index === 1 && <span className="text-3xl">🥈</span>}
-                          {index === 2 && <span className="text-3xl">🥉</span>}
-                          {index > 2 && (
-                            <span className="text-xl font-bold text-slate-600 dark:text-slate-400">
-                              {index + 1}
-                            </span>
+                  {leaderboard.map((entry, index) => {
+                    const isSyncing = syncingAthletes.has(entry.athlete_id);
+                    const syncMessage = syncMessages.get(entry.athlete_id);
+
+                    return (
+                      <tr
+                        key={entry.athlete_id}
+                        className="border-b border-slate-100 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors"
+                      >
+                        <td className="py-4 px-8">
+                          <div className="flex items-center">
+                            {index === 0 && <span className="text-3xl">🥇</span>}
+                            {index === 1 && <span className="text-3xl">🥈</span>}
+                            {index === 2 && <span className="text-3xl">🥉</span>}
+                            {index > 2 && (
+                              <span className="text-xl font-bold text-slate-600 dark:text-slate-400">
+                                {index + 1}
+                              </span>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-4 px-8">
+                          <Link
+                            href={`/athlete/${entry.athlete_id}`}
+                            className="font-semibold text-slate-900 dark:text-slate-100 text-lg hover:text-[#00A99D] dark:hover:text-[#00A99D] transition-colors"
+                          >
+                            {entry.firstname} {entry.lastname}
+                          </Link>
+                          {syncMessage && (
+                            <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">
+                              {syncMessage}
+                            </div>
                           )}
-                        </div>
-                      </td>
-                      <td className="py-4 px-8">
-                        <Link
-                          href={`/athlete/${entry.athlete_id}`}
-                          className="font-semibold text-slate-900 dark:text-slate-100 text-lg hover:text-[#00A99D] dark:hover:text-[#00A99D] transition-colors"
-                        >
-                          {entry.firstname} {entry.lastname}
-                        </Link>
-                      </td>
-                      <td className="py-4 px-8 text-right">
-                        <div className="text-2xl font-bold gradient-text">
-                          {entry.total_points.toFixed(1)}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-500">points</div>
-                      </td>
-                      <td className="py-4 px-8 text-right">
-                        <div className="text-lg font-semibold text-slate-700 dark:text-slate-300">
-                          {entry.activity_count}
-                        </div>
-                        <div className="text-xs text-slate-500 dark:text-slate-500">
-                          {entry.activity_count === 1 ? 'activity' : 'activities'}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                        <td className="py-4 px-8 text-right">
+                          <div className="text-2xl font-bold gradient-text">
+                            {entry.total_points.toFixed(1)}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-500">points</div>
+                        </td>
+                        <td className="py-4 px-8 text-right">
+                          <div className="text-lg font-semibold text-slate-700 dark:text-slate-300">
+                            {entry.activity_count}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-500">
+                            {entry.activity_count === 1 ? 'activity' : 'activities'}
+                          </div>
+                        </td>
+                        <td className="py-4 px-8 text-center">
+                          <button
+                            onClick={() => handleSyncAthlete(entry.athlete_id)}
+                            disabled={isSyncing}
+                            className="inline-flex items-center px-3 py-1.5 bg-[#00A99D] hover:bg-[#008B82] text-white text-sm font-semibold rounded-md shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Sync activities from Strava"
+                          >
+                            {isSyncing ? (
+                              <>
+                                <svg className="animate-spin h-4 w-4 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Syncing...
+                              </>
+                            ) : (
+                              <>
+                                <svg className="h-4 w-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                Sync
+                              </>
+                            )}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
