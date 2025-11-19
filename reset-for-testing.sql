@@ -11,8 +11,7 @@ DELETE FROM activities;
 UPDATE competition_config
 SET
   start_date = '2025-11-19',
-  end_date = '2025-12-31',
-  updated_at = NOW()
+  end_date = '2025-12-31'
 WHERE id = (SELECT id FROM competition_config LIMIT 1);
 
 -- Verify the changes
