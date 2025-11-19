@@ -95,10 +95,19 @@ export async function POST(
 
     let syncedCount = 0;
     let errorCount = 0;
+    let skippedCount = 0;
 
     // Process each activity
     for (const activity of activities) {
       try {
+        // Filter activities by competition date range
+        const activityDate = new Date(activity.start_date);
+        if (activityDate < competitionStartDate || activityDate > competitionEndDate) {
+          console.log(`Skipping activity ${activity.id} - outside competition dates`);
+          skippedCount++;
+          continue;
+        }
+
         // Check if activity already exists
         const { data: existingActivity } = await supabaseAdmin
           .from('activities')
@@ -123,8 +132,9 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${syncedCount} activities`,
+      message: `Synced ${syncedCount} activities (${skippedCount} skipped outside competition dates)`,
       synced: syncedCount,
+      skipped: skippedCount,
       errors: errorCount,
     });
   } catch (error) {
