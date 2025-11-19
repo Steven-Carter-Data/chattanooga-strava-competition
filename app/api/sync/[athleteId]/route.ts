@@ -29,13 +29,16 @@ export async function POST(
     }
 
     // Get access token
+    console.log('Fetching access token for strava_athlete_id:', athlete.strava_athlete_id);
     const accessToken = await getAthleteAccessToken(athlete.strava_athlete_id);
     if (!accessToken) {
+      console.error('Failed to get access token for athlete:', athlete.strava_athlete_id);
       return NextResponse.json(
-        { error: 'Failed to get access token' },
+        { error: 'Failed to get access token. Please reconnect with Strava.' },
         { status: 401 }
       );
     }
+    console.log('Access token retrieved successfully');
 
     // Get competition config
     const { data: config } = await supabaseAdmin
@@ -64,8 +67,18 @@ export async function POST(
     );
 
     if (!stravaResponse.ok) {
+      const errorText = await stravaResponse.text();
+      console.error('Strava API error:', {
+        status: stravaResponse.status,
+        statusText: stravaResponse.statusText,
+        body: errorText,
+      });
       return NextResponse.json(
-        { error: 'Failed to fetch activities from Strava' },
+        {
+          error: 'Failed to fetch activities from Strava',
+          details: `Status ${stravaResponse.status}: ${stravaResponse.statusText}`,
+          stravaError: errorText,
+        },
         { status: 500 }
       );
     }
