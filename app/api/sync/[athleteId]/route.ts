@@ -53,12 +53,20 @@ export async function POST(
       );
     }
 
-    const startDate = new Date(config.start_date);
-    const endDate = new Date(config.end_date);
+    const competitionStartDate = new Date(config.start_date);
+    const competitionEndDate = new Date(config.end_date);
+    const now = new Date();
 
-    // Fetch activities from Strava (after competition start date)
+    // Use the later of: competition start date or 90 days ago
+    // This prevents querying future dates and limits historical data
+    const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    const queryStartDate = competitionStartDate > now ? ninetyDaysAgo : competitionStartDate;
+
+    console.log('Fetching activities after:', queryStartDate.toISOString());
+
+    // Fetch activities from Strava (after query start date)
     const stravaResponse = await fetch(
-      `https://www.strava.com/api/v3/athlete/activities?after=${Math.floor(startDate.getTime() / 1000)}&per_page=200`,
+      `https://www.strava.com/api/v3/athlete/activities?after=${Math.floor(queryStartDate.getTime() / 1000)}&per_page=200`,
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
