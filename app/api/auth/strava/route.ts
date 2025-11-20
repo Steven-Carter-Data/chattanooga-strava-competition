@@ -11,7 +11,8 @@ export async function GET(request: NextRequest) {
   // Strava OAuth scopes
   // activity:read - Read activities
   // activity:read_all - Read all activities (including private)
-  const scope = 'activity:read_all,read';
+  // profile:read_all - Read athlete profile data including HR zones
+  const scope = 'activity:read_all,read,profile:read_all';
 
   const authUrl = new URL('https://www.strava.com/oauth/authorize');
   authUrl.searchParams.append('client_id', clientId!);

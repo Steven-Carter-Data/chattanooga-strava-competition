@@ -245,15 +245,24 @@ export default function AthletePage() {
               </span>
             </div>
             <div className="grid grid-cols-5 gap-3">
-              {data.athlete.hr_zones.zones.map((zone, index) => (
-                <div key={index} className="bg-white dark:bg-slate-800 p-3 rounded-lg border-2 border-blue-300 dark:border-blue-700">
-                  <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Zone {index + 1}</div>
-                  <div className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100">
-                    {zone.min} - {zone.max}
+              {data.athlete.hr_zones.zones.map((zone, index) => {
+                // Adjust zone boundaries to match Strava display:
+                // Zone 1: min-max (as is)
+                // Zones 2-4: (min+1)-max (no overlap)
+                // Zone 5: (min+1)-Max (no upper bound)
+                const displayMin = index === 0 ? zone.min : zone.min + 1;
+                const displayMax = index === 4 ? 'Max' : zone.max;
+
+                return (
+                  <div key={index} className="bg-white dark:bg-slate-800 p-3 rounded-lg border-2 border-blue-300 dark:border-blue-700">
+                    <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">Zone {index + 1}</div>
+                    <div className="text-sm font-mono font-bold text-slate-900 dark:text-slate-100">
+                      {displayMin} - {displayMax}
+                    </div>
+                    <div className="text-xs text-slate-500 dark:text-slate-400">bpm</div>
                   </div>
-                  <div className="text-xs text-slate-500 dark:text-slate-400">bpm</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}
@@ -268,6 +277,10 @@ export default function AthletePage() {
               const timeMinutes = Math.floor(data.zone_distribution[zoneKey] / 60);
               const hrZone = data.athlete.hr_zones?.zones[zone - 1];
 
+              // Adjust zone boundaries to match Strava display
+              const displayMin = zone === 1 ? hrZone?.min : (hrZone?.min ?? 0) + 1;
+              const displayMax = zone === 5 ? 'Max' : hrZone?.max;
+
               return (
                 <div key={zone}>
                   <div className="flex justify-between items-center mb-2">
@@ -275,7 +288,7 @@ export default function AthletePage() {
                       Zone {zone}
                       {hrZone && (
                         <span className="ml-2 text-xs font-mono text-slate-500 dark:text-slate-400">
-                          ({hrZone.min}-{hrZone.max} bpm)
+                          ({displayMin}-{displayMax} bpm)
                         </span>
                       )}
                     </span>
@@ -320,7 +333,7 @@ export default function AthletePage() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-600 dark:text-slate-400">Distance:</span>
-                      <span className="font-semibold">{(stats.distance_m / 1000).toFixed(1)} km</span>
+                      <span className="font-semibold">{(stats.distance_m / 1609.34).toFixed(1)} mi</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-slate-600 dark:text-slate-400">Time:</span>
@@ -338,45 +351,108 @@ export default function AthletePage() {
           <div className="card p-8">
             <h2 className="text-2xl font-bold mb-6 gradient-text">Recent Activities</h2>
             <div className="space-y-4">
-              {data.recent_activities.map((activity) => (
-                <div
-                  key={activity.id}
-                  className="bg-slate-50 dark:bg-slate-900 rounded-lg p-6 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{activity.name}</h3>
-                      <p className="text-sm text-slate-600 dark:text-slate-400">
-                        {activity.sport_type} • {new Date(activity.start_date).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric'
-                        })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-2xl font-bold gradient-text">{activity.zone_points?.toFixed(1) || '0.0'}</div>
-                      <div className="text-xs text-slate-500">points</div>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-4 text-sm mt-4">
-                    <div>
-                      <div className="text-slate-600 dark:text-slate-400">Distance</div>
-                      <div className="font-semibold">{((activity.distance_m || 0) / 1000).toFixed(2)} km</div>
-                    </div>
-                    <div>
-                      <div className="text-slate-600 dark:text-slate-400">Time</div>
-                      <div className="font-semibold">
-                        {Math.floor((activity.moving_time_s || 0) / 3600)}h {Math.floor(((activity.moving_time_s || 0) % 3600) / 60)}m
+              {data.recent_activities.map((activity) => {
+                // Calculate activity-specific zone times and percentages
+                const activityZoneTime = {
+                  zone_1: activity.zone_1_time_s || 0,
+                  zone_2: activity.zone_2_time_s || 0,
+                  zone_3: activity.zone_3_time_s || 0,
+                  zone_4: activity.zone_4_time_s || 0,
+                  zone_5: activity.zone_5_time_s || 0,
+                };
+                const activityTotalZoneTime = Object.values(activityZoneTime).reduce((sum, time) => sum + time, 0);
+                const activityZonePercentages = {
+                  zone_1: activityTotalZoneTime > 0 ? (activityZoneTime.zone_1 / activityTotalZoneTime) * 100 : 0,
+                  zone_2: activityTotalZoneTime > 0 ? (activityZoneTime.zone_2 / activityTotalZoneTime) * 100 : 0,
+                  zone_3: activityTotalZoneTime > 0 ? (activityZoneTime.zone_3 / activityTotalZoneTime) * 100 : 0,
+                  zone_4: activityTotalZoneTime > 0 ? (activityZoneTime.zone_4 / activityTotalZoneTime) * 100 : 0,
+                  zone_5: activityTotalZoneTime > 0 ? (activityZoneTime.zone_5 / activityTotalZoneTime) * 100 : 0,
+                };
+
+                return (
+                  <div
+                    key={activity.id}
+                    className="bg-slate-50 dark:bg-slate-900 rounded-lg p-6 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <h3 className="font-bold text-lg text-slate-900 dark:text-slate-100">{activity.name}</h3>
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          {activity.sport_type} • {new Date(activity.start_date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <div className="text-2xl font-bold gradient-text">{activity.zone_points?.toFixed(1) || '0.0'}</div>
+                        <div className="text-xs text-slate-500">points</div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-slate-600 dark:text-slate-400">Avg HR</div>
-                      <div className="font-semibold">{activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : 'N/A'}</div>
+                    <div className="grid grid-cols-3 gap-4 text-sm mt-4">
+                      <div>
+                        <div className="text-slate-600 dark:text-slate-400">Distance</div>
+                        <div className="font-semibold">{((activity.distance_m || 0) / 1609.34).toFixed(2)} mi</div>
+                      </div>
+                      <div>
+                        <div className="text-slate-600 dark:text-slate-400">Time</div>
+                        <div className="font-semibold">
+                          {Math.floor((activity.moving_time_s || 0) / 3600)}h {Math.floor(((activity.moving_time_s || 0) % 3600) / 60)}m
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-slate-600 dark:text-slate-400">Avg HR</div>
+                        <div className="font-semibold">{activity.average_heartrate ? `${Math.round(activity.average_heartrate)} bpm` : 'N/A'}</div>
+                      </div>
                     </div>
+
+                    {/* HR Zone Distribution for this activity */}
+                    {activityTotalZoneTime > 0 && (
+                      <div className="mt-4 pt-4 border-t border-slate-200 dark:border-slate-700">
+                        <div className="text-xs font-semibold text-slate-600 dark:text-slate-400 mb-2">HR Zone Distribution</div>
+                        <div className="grid grid-cols-5 gap-2">
+                          {[1, 2, 3, 4, 5].map((zone) => {
+                            const zoneKey = `zone_${zone}` as keyof typeof activityZoneTime;
+                            const percentage = activityZonePercentages[zoneKey];
+                            const timeMinutes = Math.floor(activityZoneTime[zoneKey] / 60);
+
+                            return (
+                              <div key={zone} className="text-center">
+                                <div className="text-xs font-semibold mb-1" style={{
+                                  color: zone === 1 ? '#60a5fa' :
+                                         zone === 2 ? '#34d399' :
+                                         zone === 3 ? '#fbbf24' :
+                                         zone === 4 ? '#fb923c' : '#ef4444'
+                                }}>
+                                  Z{zone}
+                                </div>
+                                <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-1">
+                                  <div
+                                    className={`h-2 rounded-full transition-all duration-500 ${
+                                      zone === 1 ? 'bg-blue-400' :
+                                      zone === 2 ? 'bg-emerald-400' :
+                                      zone === 3 ? 'bg-amber-400' :
+                                      zone === 4 ? 'bg-orange-400' : 'bg-red-500'
+                                    }`}
+                                    style={{ width: `${percentage}%` }}
+                                  />
+                                </div>
+                                <div className="text-xs text-slate-600 dark:text-slate-400">
+                                  {timeMinutes}m
+                                </div>
+                                <div className="text-xs text-slate-500 dark:text-slate-500">
+                                  {percentage.toFixed(0)}%
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         )}

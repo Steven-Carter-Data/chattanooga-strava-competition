@@ -14,26 +14,35 @@ function HomeContent() {
   const athleteName = searchParams.get('athlete');
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
+  const [weeklyStats, setWeeklyStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [syncingAthletes, setSyncingAthletes] = useState<Set<string>>(new Set());
   const [syncMessages, setSyncMessages] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
-    async function fetchLeaderboard() {
+    async function fetchData() {
       try {
-        const response = await fetch('/api/leaderboard');
-        const data = await response.json();
-        if (data.success) {
-          setLeaderboard(data.data);
+        // Fetch overall leaderboard
+        const leaderboardResponse = await fetch('/api/leaderboard');
+        const leaderboardData = await leaderboardResponse.json();
+        if (leaderboardData.success) {
+          setLeaderboard(leaderboardData.data);
+        }
+
+        // Fetch weekly stats
+        const weeklyResponse = await fetch('/api/weekly-stats');
+        const weeklyData = await weeklyResponse.json();
+        if (weeklyData.success) {
+          setWeeklyStats(weeklyData.data);
         }
       } catch (err) {
-        console.error('Failed to fetch leaderboard:', err);
+        console.error('Failed to fetch data:', err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchLeaderboard();
+    fetchData();
   }, []);
 
   async function handleSyncAthlete(athleteId: string) {
@@ -57,12 +66,18 @@ function HomeContent() {
           return newMap;
         });
 
-        // Refresh leaderboard after 2 seconds
+        // Refresh leaderboard and weekly stats after 2 seconds
         setTimeout(async () => {
-          const response = await fetch('/api/leaderboard');
-          const data = await response.json();
-          if (data.success) {
-            setLeaderboard(data.data);
+          const leaderboardResponse = await fetch('/api/leaderboard');
+          const leaderboardData = await leaderboardResponse.json();
+          if (leaderboardData.success) {
+            setLeaderboard(leaderboardData.data);
+          }
+
+          const weeklyResponse = await fetch('/api/weekly-stats');
+          const weeklyData = await weeklyResponse.json();
+          if (weeklyData.success) {
+            setWeeklyStats(weeklyData.data);
           }
 
           // Clear message after another 2 seconds
@@ -306,30 +321,83 @@ function HomeContent() {
           )}
         </div>
 
-        {/* Info Cards */}
-        <div className="grid md:grid-cols-3 gap-6 mt-8">
-          <div className="card p-6 text-center">
-            <div className="text-4xl mb-3">💪</div>
-            <h3 className="font-bold text-lg mb-2">Zone-Based Scoring</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Zone 1-5: 1-5 points per minute
-            </p>
+        {/* Weekly Performance Tracker */}
+        {!loading && weeklyStats && weeklyStats.leaderboard.length > 0 && (
+          <div className="card p-8 mt-8">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <h2 className="text-3xl font-bold gradient-text">This Week's Performance</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+                  {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                </p>
+              </div>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-8">
+              {/* This Week's Leaders */}
+              <div>
+                <h3 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-300">Weekly Leaders</h3>
+                <div className="space-y-3">
+                  {weeklyStats.leaderboard.slice(0, 5).map((entry: any, index: number) => (
+                    <div
+                      key={entry.athlete_id}
+                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="text-lg font-bold text-slate-400 dark:text-slate-600 w-6">
+                          {index + 1}.
+                        </div>
+                        <Link
+                          href={`/athlete/${entry.athlete_id}`}
+                          className="font-semibold text-slate-900 dark:text-slate-100 hover:text-[#00A99D] dark:hover:text-[#00A99D] transition-colors"
+                        >
+                          {entry.firstname} {entry.lastname}
+                        </Link>
+                      </div>
+                      <div className="flex items-center gap-4">
+                        <div className="text-right">
+                          <div className="text-lg font-bold gradient-text">{entry.total_points.toFixed(1)}</div>
+                          <div className="text-xs text-slate-500">pts</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">{entry.activity_count}</div>
+                          <div className="text-xs text-slate-500">activities</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Week's Statistics */}
+              <div>
+                <h3 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-300">Week's Stats</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
+                    <div className="text-sm text-blue-600 dark:text-blue-400 font-semibold mb-1">Activities</div>
+                    <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">{weeklyStats.stats.total_activities}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-lg p-4 border border-emerald-100 dark:border-emerald-800">
+                    <div className="text-sm text-emerald-600 dark:text-emerald-400 font-semibold mb-1">Total Points</div>
+                    <div className="text-2xl font-bold text-emerald-900 dark:text-emerald-100">{weeklyStats.stats.total_points.toFixed(0)}</div>
+                  </div>
+                  <div className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 rounded-lg p-4 border border-amber-100 dark:border-amber-800">
+                    <div className="text-sm text-amber-600 dark:text-amber-400 font-semibold mb-1">Distance</div>
+                    <div className="text-2xl font-bold text-amber-900 dark:text-amber-100">
+                      {(weeklyStats.stats.total_distance_m / 1609.34).toFixed(1)} mi
+                    </div>
+                  </div>
+                  <div className="bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-900/20 dark:to-pink-900/20 rounded-lg p-4 border border-purple-100 dark:border-purple-800">
+                    <div className="text-sm text-purple-600 dark:text-purple-400 font-semibold mb-1">Time</div>
+                    <div className="text-2xl font-bold text-purple-900 dark:text-purple-100">
+                      {Math.floor(weeklyStats.stats.total_time_s / 3600)}h {Math.floor((weeklyStats.stats.total_time_s % 3600) / 60)}m
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="card p-6 text-center">
-            <div className="text-4xl mb-3">🏊‍♂️🚴‍♂️🏃‍♂️</div>
-            <h3 className="font-bold text-lg mb-2">All Disciplines</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Swim, bike, run, and more
-            </p>
-          </div>
-          <div className="card p-6 text-center">
-            <div className="text-4xl mb-3">⚡</div>
-            <h3 className="font-bold text-lg mb-2">Auto-Sync</h3>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              Activities tracked automatically
-            </p>
-          </div>
-        </div>
+        )}
       </main>
 
       {/* Footer */}

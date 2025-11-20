@@ -68,6 +68,34 @@ export async function POST(request: NextRequest) {
 }
 
 /**
+ * Classify bike-related activities based on elevation data
+ * - Activities with elevation gain → "Ride" (outdoor biking)
+ * - Activities without elevation gain → "Peloton" (indoor biking)
+ */
+function classifyBikeActivity(activity: any): string {
+  const sportType = activity.sport_type || activity.type;
+
+  // List of bike-related activity types from Strava
+  const bikeTypes = ['Ride', 'VirtualRide', 'EBikeRide', 'Velomobile', 'Handcycle'];
+
+  // Check if this is a bike-related activity
+  if (bikeTypes.includes(sportType)) {
+    const elevation = activity.total_elevation_gain || 0;
+
+    // If there's any elevation gain, it's an outdoor ride
+    if (elevation > 0) {
+      return 'Ride';
+    } else {
+      // No elevation = indoor/virtual = Peloton
+      return 'Peloton';
+    }
+  }
+
+  // Not a bike activity, return original type
+  return sportType;
+}
+
+/**
  * Handle activity creation or update
  */
 async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
@@ -127,6 +155,9 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     athleteDbId = existingAthlete.id;
   }
 
+  // Classify bike activities based on elevation
+  const classifiedSportType = classifyBikeActivity(activity);
+
   // Upsert activity
   const { data: activityRecord, error: activityError } = await supabaseAdmin
     .from('activities')
@@ -135,7 +166,7 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
         strava_activity_id: activity.id,
         athlete_id: athleteDbId,
         name: activity.name,
-        sport_type: activity.sport_type || activity.type,
+        sport_type: classifiedSportType,
         start_date: activity.start_date,
         distance_m: activity.distance,
         moving_time_s: activity.moving_time,
