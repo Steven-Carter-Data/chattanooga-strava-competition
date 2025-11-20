@@ -326,7 +326,7 @@ function HomeContent() {
           <div className="card p-8 mt-8">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <h2 className="text-3xl font-bold gradient-text">This Week's Performance</h2>
+                <h2 className="text-3xl font-bold gradient-text">This Week&apos;s Performance</h2>
                 <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
                   {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                 </p>
@@ -371,7 +371,7 @@ function HomeContent() {
 
               {/* Week's Statistics */}
               <div>
-                <h3 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-300">Week's Stats</h3>
+                <h3 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-300">Week&apos;s Stats</h3>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="bg-gradient-to-br from-blue-50 to-cyan-50 dark:from-blue-900/20 dark:to-cyan-900/20 rounded-lg p-4 border border-blue-100 dark:border-blue-800">
                     <div className="text-sm text-blue-600 dark:text-blue-400 font-semibold mb-1">Activities</div>
