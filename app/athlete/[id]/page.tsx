@@ -144,8 +144,8 @@ export default function AthletePage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Header */}
-      <div className="ironman-hero text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
+      <div className="bourbon-hero text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/30"></div>
         <div className="max-w-6xl mx-auto px-6 py-8 relative z-10">
           <Link href="/" className="inline-flex items-center text-white/80 hover:text-white mb-4 transition-colors">
             <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
