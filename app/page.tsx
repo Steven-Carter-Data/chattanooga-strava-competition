@@ -127,7 +127,7 @@ function HomeContent() {
         <div className="max-w-6xl mx-auto px-6 py-20 relative z-10">
           <div className="text-center">
             <div className="mb-4">
-              <span className="bourbon-badge">Est. 2024</span>
+              <span className="bourbon-badge">Est. 2019</span>
             </div>
             <h1 className="text-5xl md:text-7xl font-black mb-4 tracking-tight leading-none">
               BOURBON CHASERS
@@ -146,7 +146,7 @@ function HomeContent() {
               January 1 - March 31, 2026
             </p>
             <p className="mt-4 text-base md:text-lg max-w-2xl mx-auto opacity-90 font-medium">
-              Heart rate zone-based competition. Every minute in the zone earns points. Train hard, chase bourbon.
+              Train hard, chase bourbon.
             </p>
           </div>
         </div>
@@ -548,7 +548,7 @@ function HomeContent() {
               />
               <div className="text-slate-700 dark:text-slate-300">
                 <p className="font-bold heading-font text-lg">Bourbon Chasers</p>
-                <p className="text-sm text-slate-500 dark:text-slate-400">Powered by Strava API</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Powered by caffeine and poor decisions</p>
               </div>
             </div>
             <div className="text-center md:text-right">
