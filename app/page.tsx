@@ -18,6 +18,7 @@ function HomeContent() {
   const [loading, setLoading] = useState(true);
   const [syncingAthletes, setSyncingAthletes] = useState<Set<string>>(new Set());
   const [syncMessages, setSyncMessages] = useState<Map<string, string>>(new Map());
+  const [showScoringInfo, setShowScoringInfo] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -196,6 +197,135 @@ function HomeContent() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Scoring Information - Collapsible */}
+        <div className="card p-6 mb-8">
+          <button
+            onClick={() => setShowScoringInfo(!showScoringInfo)}
+            className="w-full flex items-center justify-between text-left"
+          >
+            <div className="flex items-center gap-3">
+              <svg
+                className="w-6 h-6 text-[#00A99D]"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
+                How Points Are Calculated
+              </h3>
+            </div>
+            <svg
+              className={`w-5 h-5 text-slate-500 transition-transform ${showScoringInfo ? 'rotate-180' : ''}`}
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showScoringInfo && (
+            <div className="mt-6 pt-6 border-t border-slate-200 dark:border-slate-700">
+              <div className="space-y-6">
+                {/* Zone-Based Scoring */}
+                <div>
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                    Zone-Based Scoring
+                  </h4>
+                  <p className="text-slate-600 dark:text-slate-300 mb-4">
+                    Points are earned based on time spent in each heart rate zone during your activities.
+                    The higher the zone, the more points per minute you earn.
+                  </p>
+                  <div className="grid sm:grid-cols-5 gap-3">
+                    <div className="bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/20 dark:to-blue-800/20 rounded-lg p-4 border border-blue-200 dark:border-blue-700">
+                      <div className="text-blue-700 dark:text-blue-300 font-bold text-lg mb-1">Zone 1</div>
+                      <div className="text-2xl font-bold text-blue-900 dark:text-blue-100">1 pt</div>
+                      <div className="text-sm text-blue-600 dark:text-blue-400">per minute</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-green-50 to-green-100 dark:from-green-900/20 dark:to-green-800/20 rounded-lg p-4 border border-green-200 dark:border-green-700">
+                      <div className="text-green-700 dark:text-green-300 font-bold text-lg mb-1">Zone 2</div>
+                      <div className="text-2xl font-bold text-green-900 dark:text-green-100">2 pts</div>
+                      <div className="text-sm text-green-600 dark:text-green-400">per minute</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 dark:from-yellow-900/20 dark:to-yellow-800/20 rounded-lg p-4 border border-yellow-200 dark:border-yellow-700">
+                      <div className="text-yellow-700 dark:text-yellow-300 font-bold text-lg mb-1">Zone 3</div>
+                      <div className="text-2xl font-bold text-yellow-900 dark:text-yellow-100">3 pts</div>
+                      <div className="text-sm text-yellow-600 dark:text-yellow-400">per minute</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-orange-50 to-orange-100 dark:from-orange-900/20 dark:to-orange-800/20 rounded-lg p-4 border border-orange-200 dark:border-orange-700">
+                      <div className="text-orange-700 dark:text-orange-300 font-bold text-lg mb-1">Zone 4</div>
+                      <div className="text-2xl font-bold text-orange-900 dark:text-orange-100">4 pts</div>
+                      <div className="text-sm text-orange-600 dark:text-orange-400">per minute</div>
+                    </div>
+                    <div className="bg-gradient-to-br from-red-50 to-red-100 dark:from-red-900/20 dark:to-red-800/20 rounded-lg p-4 border border-red-200 dark:border-red-700">
+                      <div className="text-red-700 dark:text-red-300 font-bold text-lg mb-1">Zone 5</div>
+                      <div className="text-2xl font-bold text-red-900 dark:text-red-100">5 pts</div>
+                      <div className="text-sm text-red-600 dark:text-red-400">per minute</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Custom HR Zones */}
+                <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4">
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-2">
+                    Your Custom Heart Rate Zones
+                  </h4>
+                  <p className="text-slate-600 dark:text-slate-300 text-sm">
+                    We use your personalized heart rate zones from Strava, ensuring accurate scoring
+                    based on your individual fitness level. Each athlete&apos;s zones are different and
+                    calculated from your Strava profile settings.
+                  </p>
+                </div>
+
+                {/* Example Calculation */}
+                <div>
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                    Example Calculation
+                  </h4>
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/10 dark:to-teal-900/10 rounded-lg p-4 border border-emerald-200 dark:border-emerald-800">
+                    <p className="text-slate-700 dark:text-slate-300 mb-3">
+                      If you complete a 60-minute run with the following time in zones:
+                    </p>
+                    <ul className="space-y-2 text-slate-600 dark:text-slate-400 mb-3">
+                      <li>• Zone 1: 10 minutes → 10 points</li>
+                      <li>• Zone 2: 20 minutes → 40 points</li>
+                      <li>• Zone 3: 25 minutes → 75 points</li>
+                      <li>• Zone 4: 5 minutes → 20 points</li>
+                      <li>• Zone 5: 0 minutes → 0 points</li>
+                    </ul>
+                    <div className="pt-3 border-t border-emerald-200 dark:border-emerald-800">
+                      <span className="text-slate-700 dark:text-slate-300 font-semibold">Total Activity Points: </span>
+                      <span className="text-2xl font-bold gradient-text">145 points</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Eligible Activities */}
+                <div>
+                  <h4 className="text-lg font-semibold text-slate-900 dark:text-slate-100 mb-3">
+                    Eligible Activities
+                  </h4>
+                  <p className="text-slate-600 dark:text-slate-300 mb-3">
+                    All cardio activities with heart rate data count toward your score:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Run', 'Ride', 'Peloton', 'Swim', 'Walk', 'Hike', 'Elliptical', 'Workout'].map((activity) => (
+                      <span
+                        key={activity}
+                        className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm font-medium"
+                      >
+                        {activity}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Leaderboard */}
