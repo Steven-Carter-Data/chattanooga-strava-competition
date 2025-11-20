@@ -313,7 +313,7 @@ function HomeContent() {
                     All cardio activities with heart rate data count toward your score:
                   </p>
                   <div className="flex flex-wrap gap-2">
-                    {['Run', 'Ride', 'Peloton', 'Swim', 'Walk', 'Hike', 'Elliptical', 'Workout'].map((activity) => (
+                    {['Run', 'Ride', 'Peloton', 'Swim', 'Walk', 'Hike', 'Elliptical', 'Workout', 'Yoga'].map((activity) => (
                       <span
                         key={activity}
                         className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm font-medium"
