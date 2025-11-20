@@ -122,25 +122,31 @@ function HomeContent() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950">
       {/* Hero Section */}
-      <div className="ironman-hero text-white relative overflow-hidden">
-        <div className="absolute inset-0 bg-black/20"></div>
-        <div className="max-w-6xl mx-auto px-6 py-16 relative z-10">
+      <div className="bourbon-hero text-white relative overflow-hidden">
+        <div className="absolute inset-0 bg-black/30"></div>
+        <div className="max-w-6xl mx-auto px-6 py-20 relative z-10">
           <div className="text-center">
+            <div className="mb-4">
+              <span className="bourbon-badge">Est. 2024</span>
+            </div>
+            <h1 className="text-5xl md:text-7xl font-black mb-4 tracking-tight leading-none">
+              BOURBON CHASERS
+            </h1>
             <div className="mb-6 flex justify-center">
               <img
                 src="/images/ironman_chattanooga_logo_2.png"
                 alt="Ironman 70.3 Chattanooga"
-                className="h-24 md:h-32 w-auto"
+                className="h-20 md:h-24 w-auto opacity-90"
               />
             </div>
-            <h2 className="text-2xl md:text-3xl font-bold mb-2 tracking-wide">
-              Training Championship
+            <h2 className="text-2xl md:text-4xl font-bold mb-4 tracking-tight">
+              Strava Training Championship
             </h2>
-            <p className="text-xl md:text-2xl font-semibold mb-6">
+            <p className="text-lg md:text-xl font-semibold mb-2 text-amber-300">
               January 1 - March 31, 2026
             </p>
-            <p className="mt-4 text-lg max-w-2xl mx-auto opacity-90">
-              Compete with heart rate zone-based scoring. Every minute in the zone counts!
+            <p className="mt-4 text-base md:text-lg max-w-2xl mx-auto opacity-90 font-medium">
+              Heart rate zone-based competition. Every minute in the zone earns points. Train hard, chase bourbon.
             </p>
           </div>
         </div>
@@ -531,22 +537,27 @@ function HomeContent() {
       </main>
 
       {/* Footer */}
-      <footer className="mt-16 py-8 border-t border-slate-200 dark:border-slate-800">
+      <footer className="mt-16 py-10 bg-slate-100 dark:bg-slate-900 border-t-2 border-slate-200 dark:border-slate-800">
         <div className="max-w-6xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+            <div className="flex items-center gap-4">
               <img
                 src="/images/ironman_logo.png"
                 alt="Ironman"
-                className="h-8 w-auto"
+                className="h-10 w-auto"
               />
-              <div className="text-slate-600 dark:text-slate-400 text-sm">
-                <p>Powered by Strava API</p>
-                <p className="text-xs">Built for Ironman 70.3 Chattanooga Training</p>
+              <div className="text-slate-700 dark:text-slate-300">
+                <p className="font-bold heading-font text-lg">Bourbon Chasers</p>
+                <p className="text-sm text-slate-500 dark:text-slate-400">Powered by Strava API</p>
               </div>
             </div>
-            <div className="text-slate-500 dark:text-slate-500 text-xs">
-              © 2026 Training Championship
+            <div className="text-center md:text-right">
+              <p className="text-slate-600 dark:text-slate-400 text-sm font-medium">
+                Training for Ironman 70.3 Chattanooga
+              </p>
+              <p className="text-slate-500 dark:text-slate-500 text-xs mt-1">
+                © 2024-2026 Bourbon Chasers Training Championship
+              </p>
             </div>
           </div>
         </div>
