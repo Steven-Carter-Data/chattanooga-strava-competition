@@ -241,7 +241,7 @@ export default function AthletePage() {
             </h3>
             <div className="mb-3">
               <span className="inline-block px-3 py-1 bg-blue-100 dark:bg-blue-800 text-blue-800 dark:text-blue-100 rounded-full text-sm font-semibold">
-                {data.athlete.hr_zones.custom_zones ? 'Custom Zones' : 'Auto Zones'}
+                {data.athlete.hr_zones.custom_zones ? 'Custom Zones' : 'Strava Heart Rate Zones'}
               </span>
             </div>
             <div className="grid grid-cols-5 gap-3">
@@ -299,11 +299,11 @@ export default function AthletePage() {
                   <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-3">
                     <div
                       className={`h-3 rounded-full transition-all duration-500 ${
-                        zone === 1 ? 'bg-blue-400' :
-                        zone === 2 ? 'bg-green-400' :
-                        zone === 3 ? 'bg-yellow-400' :
-                        zone === 4 ? 'bg-orange-500' :
-                        'bg-red-600'
+                        zone === 1 ? 'bg-blue-600' :
+                        zone === 2 ? 'bg-emerald-600' :
+                        zone === 3 ? 'bg-yellow-600' :
+                        zone === 4 ? 'bg-orange-600' :
+                        'bg-red-700'
                       }`}
                       style={{ width: `${percentage}%` }}
                     ></div>
@@ -420,20 +420,20 @@ export default function AthletePage() {
                             return (
                               <div key={zone} className="text-center">
                                 <div className="text-xs font-semibold mb-1" style={{
-                                  color: zone === 1 ? '#60a5fa' :
-                                         zone === 2 ? '#34d399' :
-                                         zone === 3 ? '#fbbf24' :
-                                         zone === 4 ? '#fb923c' : '#ef4444'
+                                  color: zone === 1 ? '#2563eb' :
+                                         zone === 2 ? '#059669' :
+                                         zone === 3 ? '#ca8a04' :
+                                         zone === 4 ? '#ea580c' : '#b91c1c'
                                 }}>
                                   Z{zone}
                                 </div>
                                 <div className="w-full bg-slate-200 dark:bg-slate-700 rounded-full h-2 mb-1">
                                   <div
                                     className={`h-2 rounded-full transition-all duration-500 ${
-                                      zone === 1 ? 'bg-blue-400' :
-                                      zone === 2 ? 'bg-emerald-400' :
-                                      zone === 3 ? 'bg-amber-400' :
-                                      zone === 4 ? 'bg-orange-400' : 'bg-red-500'
+                                      zone === 1 ? 'bg-blue-600' :
+                                      zone === 2 ? 'bg-emerald-600' :
+                                      zone === 3 ? 'bg-yellow-600' :
+                                      zone === 4 ? 'bg-orange-600' : 'bg-red-700'
                                     }`}
                                     style={{ width: `${percentage}%` }}
                                   />
