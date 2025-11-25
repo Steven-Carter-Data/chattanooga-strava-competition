@@ -370,6 +370,7 @@ function HomeContent() {
                     <th className="text-left py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Rank</th>
                     <th className="text-left py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Athlete</th>
                     <th className="text-right py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Points</th>
+                    <th className="text-right py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Behind</th>
                     <th className="text-right py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Activities</th>
                     <th className="text-center py-4 px-8 font-bold text-slate-700 dark:text-slate-300 uppercase text-xs tracking-wider">Actions</th>
                   </tr>
@@ -378,6 +379,8 @@ function HomeContent() {
                   {leaderboard.map((entry, index) => {
                     const isSyncing = syncingAthletes.has(entry.athlete_id);
                     const syncMessage = syncMessages.get(entry.athlete_id);
+                    const leaderPoints = leaderboard[0]?.total_points || 0;
+                    const pointsBehind = leaderPoints - entry.total_points;
 
                     return (
                       <tr
@@ -414,6 +417,17 @@ function HomeContent() {
                             {entry.total_points.toFixed(1)}
                           </div>
                           <div className="text-xs text-slate-500 dark:text-slate-500">points</div>
+                        </td>
+                        <td className="py-4 px-8 text-right">
+                          {index === 0 ? (
+                            <div className="text-sm font-semibold text-slate-400 dark:text-slate-600">
+                              —
+                            </div>
+                          ) : (
+                            <div className="text-lg font-semibold text-orange-600 dark:text-orange-400">
+                              -{pointsBehind.toFixed(1)}
+                            </div>
+                          )}
                         </td>
                         <td className="py-4 px-8 text-right">
                           <div className="text-lg font-semibold text-slate-700 dark:text-slate-300">
@@ -474,34 +488,45 @@ function HomeContent() {
               <div>
                 <h3 className="text-lg font-bold mb-4 text-slate-700 dark:text-slate-300">Weekly Leaders</h3>
                 <div className="space-y-3">
-                  {weeklyStats.leaderboard.slice(0, 5).map((entry: any, index: number) => (
-                    <div
-                      key={entry.athlete_id}
-                      className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="text-lg font-bold text-slate-400 dark:text-slate-600 w-6">
-                          {index + 1}.
+                  {weeklyStats.leaderboard.slice(0, 5).map((entry: any, index: number) => {
+                    const weeklyLeaderPoints = weeklyStats.leaderboard[0]?.total_points || 0;
+                    const weeklyPointsBehind = weeklyLeaderPoints - entry.total_points;
+
+                    return (
+                      <div
+                        key={entry.athlete_id}
+                        className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-900 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="text-lg font-bold text-slate-400 dark:text-slate-600 w-6">
+                            {index + 1}.
+                          </div>
+                          <Link
+                            href={`/athlete/${entry.athlete_id}`}
+                            className="font-semibold text-slate-900 dark:text-slate-100 hover:text-[#00A99D] dark:hover:text-[#00A99D] transition-colors"
+                          >
+                            {entry.firstname} {entry.lastname}
+                          </Link>
                         </div>
-                        <Link
-                          href={`/athlete/${entry.athlete_id}`}
-                          className="font-semibold text-slate-900 dark:text-slate-100 hover:text-[#00A99D] dark:hover:text-[#00A99D] transition-colors"
-                        >
-                          {entry.firstname} {entry.lastname}
-                        </Link>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <div className="text-lg font-bold gradient-text">{entry.total_points.toFixed(1)}</div>
+                            <div className="text-xs text-slate-500">pts</div>
+                          </div>
+                          {index > 0 && (
+                            <div className="text-right">
+                              <div className="text-sm font-semibold text-orange-600 dark:text-orange-400">-{weeklyPointsBehind.toFixed(1)}</div>
+                              <div className="text-xs text-slate-500">behind</div>
+                            </div>
+                          )}
+                          <div className="text-right">
+                            <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">{entry.activity_count}</div>
+                            <div className="text-xs text-slate-500">activities</div>
+                          </div>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-4">
-                        <div className="text-right">
-                          <div className="text-lg font-bold gradient-text">{entry.total_points.toFixed(1)}</div>
-                          <div className="text-xs text-slate-500">pts</div>
-                        </div>
-                        <div className="text-right">
-                          <div className="text-sm font-semibold text-slate-600 dark:text-slate-400">{entry.activity_count}</div>
-                          <div className="text-xs text-slate-500">activities</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
 

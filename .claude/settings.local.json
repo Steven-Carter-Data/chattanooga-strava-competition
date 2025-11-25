@@ -18,7 +18,13 @@
       "Bash(git init:*)",
       "Bash(echo:*)",
       "Bash(node -e:*)",
-      "Bash(cat:*)"
+      "Bash(cat:*)",
+      "Bash(node check-zones.js:*)",
+      "Bash(node test-strava-zones.js:*)",
+      "Bash(node check-token.js:*)",
+      "Bash(node debug-zones.js:*)",
+      "Bash(node analyze-zone-issue.js:*)",
+      "Bash(node verify-zone-display.js:*)"
     ],
     "deny": [],
     "ask": []
