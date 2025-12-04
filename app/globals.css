@@ -2,45 +2,73 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+/* Art Deco Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Marcellus&family=Josefin+Sans:wght@300;400;500;600;700&display=swap');
 
 :root {
-  --background: #ffffff;
-  --foreground: #1a1a1a;
-  --card-bg: #ffffff;
-  --border: #e2e8f0;
-  --primary: #00A99D;
-  --primary-dark: #008B82;
-  --secondary: #000000;
-  --accent: #00A99D;
-  --chattanooga-teal: #00A99D;
-  --chattanooga-teal-dark: #008B82;
+  /* Art Deco Color Palette */
+  --background: #0A0A0A;
+  --foreground: #F2F0E4;
+  --card-bg: #141414;
+  --border: #D4AF37;
+  --gold: #D4AF37;
+  --gold-light: #F2E8C4;
+  --gold-dark: #B8960C;
+  --midnight: #1E3D59;
+  --muted: #888888;
+
+  /* Zone colors */
+  --zone-1: #3B82F6;
+  --zone-2: #10B981;
+  --zone-3: #EAB308;
+  --zone-4: #F97316;
+  --zone-5: #DC2626;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #f5f5f5;
-    --card-bg: #1a1a1a;
-    --border: #333333;
-    --primary: #00A99D;
-    --primary-dark: #008B82;
-  }
-}
-
+/* Base styles - Art Deco obsidian black */
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Josefin Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+/* Art Deco Display Typography */
 h1, h2, h3, h4, h5, h6, .heading-font {
-  font-family: 'Space Grotesk', 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-family: 'Marcellus', Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0.1em;
+}
+
+/* Art Deco diagonal crosshatch background pattern */
+.art-deco-bg {
+  background-color: var(--background);
+  background-image:
+    repeating-linear-gradient(
+      45deg,
+      transparent,
+      transparent 40px,
+      rgba(212, 175, 55, 0.03) 40px,
+      rgba(212, 175, 55, 0.03) 41px
+    ),
+    repeating-linear-gradient(
+      -45deg,
+      transparent,
+      transparent 40px,
+      rgba(212, 175, 55, 0.03) 40px,
+      rgba(212, 175, 55, 0.03) 41px
+    );
+}
+
+/* Sunburst radial gradient for focal points */
+.sunburst-bg {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(212, 175, 55, 0.15) 0%,
+    rgba(212, 175, 55, 0.05) 30%,
+    transparent 70%
+  );
 }
 
 @layer utilities {
@@ -48,30 +76,254 @@ h1, h2, h3, h4, h5, h6, .heading-font {
     text-wrap: balance;
   }
 
+  /* Art Deco Gold Gradient Text */
   .gradient-text {
-    background: linear-gradient(135deg, #00A99D 0%, #008B82 100%);
+    background: linear-gradient(135deg, #D4AF37 0%, #F2E8C4 50%, #D4AF37 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
 
+  /* Art Deco Card - Sharp corners with gold border */
   .card {
-    @apply bg-white dark:bg-zinc-900 rounded-xl shadow-lg border border-gray-200 dark:border-zinc-800;
+    @apply bg-[#141414] border border-gold/30 relative;
+    transition: all 0.5s ease-out;
   }
 
+  .card:hover {
+    @apply border-gold/100 -translate-y-1;
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.2);
+  }
+
+  /* Corner decorations for cards */
+  .card::before,
+  .card::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border-color: var(--gold);
+    opacity: 0.5;
+    transition: opacity 0.5s ease-out;
+  }
+
+  .card::before {
+    top: 8px;
+    left: 8px;
+    border-left: 2px solid;
+    border-top: 2px solid;
+  }
+
+  .card::after {
+    bottom: 8px;
+    right: 8px;
+    border-right: 2px solid;
+    border-bottom: 2px solid;
+  }
+
+  .card:hover::before,
+  .card:hover::after {
+    opacity: 1;
+  }
+
+  /* Art Deco Primary Button */
   .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-[#00A99D] to-[#008B82] hover:from-[#008B82] hover:to-[#006B64] text-white font-bold rounded-lg shadow-md hover:shadow-xl transition-all duration-200 transform hover:-translate-y-0.5;
+    @apply px-8 py-3 bg-transparent border-2 border-gold text-gold font-body font-semibold uppercase tracking-widest;
+    transition: all 0.4s ease-out;
   }
 
+  .btn-primary:hover {
+    @apply bg-gold text-background;
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+  }
+
+  .btn-primary:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Art Deco Secondary Button */
   .btn-secondary {
-    @apply px-6 py-3 bg-black hover:bg-zinc-800 text-white font-bold rounded-lg shadow-md hover:shadow-xl transition-all duration-200;
+    @apply px-6 py-3 bg-transparent border border-gold/50 text-foreground font-body font-medium uppercase tracking-wider;
+    transition: all 0.4s ease-out;
   }
 
+  .btn-secondary:hover {
+    @apply bg-midnight border-gold text-foreground;
+  }
+
+  /* Art Deco Small Button (for sync, etc.) */
+  .btn-small {
+    @apply px-4 py-2 bg-transparent border border-gold/50 text-gold text-sm font-body font-medium uppercase tracking-wider;
+    transition: all 0.3s ease-out;
+  }
+
+  .btn-small:hover {
+    @apply bg-gold text-background border-gold;
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.3);
+  }
+
+  .btn-small:disabled {
+    @apply opacity-50 cursor-not-allowed;
+  }
+
+  /* Art Deco Hero Section */
   .bourbon-hero {
-    background: linear-gradient(135deg, #00A99D 0%, #008B82 50%, #000000 100%);
+    background: linear-gradient(
+      180deg,
+      #0A0A0A 0%,
+      #141414 50%,
+      #0A0A0A 100%
+    );
+    position: relative;
   }
 
-  .bourbon-badge {
-    @apply inline-block px-3 py-1 bg-gradient-to-r from-amber-500 to-amber-600 text-white text-xs font-bold rounded-full uppercase tracking-wider shadow-md;
+  .bourbon-hero::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(
+      ellipse at center top,
+      rgba(212, 175, 55, 0.1) 0%,
+      transparent 60%
+    );
+    pointer-events: none;
   }
+
+  /* Art Deco Badge */
+  .bourbon-badge {
+    @apply inline-block px-4 py-1.5 bg-transparent border-2 border-gold text-gold text-xs font-body font-bold uppercase tracking-widest;
+  }
+
+  /* Art Deco Section Divider */
+  .section-divider {
+    @apply flex items-center justify-center gap-4 my-8;
+  }
+
+  .section-divider::before,
+  .section-divider::after {
+    content: '';
+    @apply h-px w-24 bg-gold/30;
+  }
+
+  /* Rotated diamond container for icons/avatars */
+  .diamond-frame {
+    @apply w-12 h-12 bg-card border border-gold/50 flex items-center justify-center;
+    transform: rotate(45deg);
+  }
+
+  .diamond-frame > * {
+    transform: rotate(-45deg);
+  }
+
+  /* Double frame for images */
+  .double-frame {
+    @apply p-1 border border-gold/50;
+  }
+
+  .double-frame-inner {
+    @apply p-0.5 border border-background;
+  }
+
+  /* Gold glow effect */
+  .gold-glow {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+  }
+
+  .gold-glow-lg {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.3);
+  }
+
+  /* Art Deco Input (underlined elegance) */
+  .input-deco {
+    @apply bg-transparent border-0 border-b-2 border-gold text-foreground h-12 px-3 py-2 font-body;
+    transition: all 0.3s ease-out;
+  }
+
+  .input-deco::placeholder {
+    @apply text-muted;
+  }
+
+  .input-deco:focus {
+    @apply outline-none border-gold-light;
+    box-shadow: 0 4px 10px rgba(212, 175, 55, 0.2);
+  }
+
+  /* HR Zone colors (Art Deco adjusted) */
+  .zone-1-bg { @apply bg-zone-1; }
+  .zone-2-bg { @apply bg-zone-2; }
+  .zone-3-bg { @apply bg-zone-3; }
+  .zone-4-bg { @apply bg-zone-4; }
+  .zone-5-bg { @apply bg-zone-5; }
+}
+
+/* Roman numeral helper class */
+.roman-numeral {
+  font-family: 'Marcellus', Georgia, serif;
+  font-variant-numeric: normal;
+}
+
+/* Stepped corner clip-path for advanced cards */
+.stepped-corners {
+  clip-path: polygon(
+    0 10px,
+    10px 10px,
+    10px 0,
+    calc(100% - 10px) 0,
+    calc(100% - 10px) 10px,
+    100% 10px,
+    100% calc(100% - 10px),
+    calc(100% - 10px) calc(100% - 10px),
+    calc(100% - 10px) 100%,
+    10px 100%,
+    10px calc(100% - 10px),
+    0 calc(100% - 10px)
+  );
+}
+
+/* Animation keyframes */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes goldPulse {
+  0%, 100% {
+    box-shadow: 0 0 15px rgba(212, 175, 55, 0.2);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(212, 175, 55, 0.4);
+  }
+}
+
+.animate-fade-in-up {
+  animation: fadeInUp 0.6s ease-out forwards;
+}
+
+.animate-gold-pulse {
+  animation: goldPulse 2s ease-in-out infinite;
+}
+
+/* Scrollbar styling for Art Deco */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--background);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--gold);
+  opacity: 0.5;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--gold-light);
 }
