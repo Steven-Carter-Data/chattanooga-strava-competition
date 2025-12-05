@@ -144,7 +144,7 @@ function HomeContent() {
         <div className="absolute left-1/4 top-0 bottom-0 w-px bg-gold/10"></div>
         <div className="absolute right-1/4 top-0 bottom-0 w-px bg-gold/10"></div>
 
-        <div className="max-w-6xl mx-auto px-6 py-20 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20 relative z-10">
           <div className="text-center">
             {/* Badge */}
             <div className="mb-6">
@@ -152,7 +152,7 @@ function HomeContent() {
             </div>
 
             {/* Main Title - Art Deco Typography */}
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-display mb-6 tracking-widest uppercase text-foreground">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-display mb-6 tracking-widest uppercase text-foreground">
               Bourbon Chasers
             </h1>
 
@@ -177,7 +177,7 @@ function HomeContent() {
             </div>
 
             {/* Subtitle */}
-            <h2 className="text-2xl md:text-4xl font-display mb-6 tracking-wider uppercase gradient-text">
+            <h2 className="text-xl sm:text-2xl md:text-4xl font-display mb-6 tracking-wider uppercase gradient-text">
               Strava Training Championship
             </h2>
 
@@ -197,7 +197,7 @@ function HomeContent() {
         <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-gold/50 to-transparent"></div>
       </div>
 
-      <main className="max-w-6xl mx-auto px-6 py-16">
+      <main className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16">
         {/* Success/Error Messages */}
         {success === 'auth_complete' && (
           <div className="mb-8 p-6 card border-gold/50">
@@ -231,9 +231,9 @@ function HomeContent() {
         {/* Connect with Strava - Compact Section */}
         <div className="card p-4 mb-10">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
+            <div className="flex flex-col sm:flex-row items-center gap-3 text-center sm:text-left">
               <span className="text-muted font-body text-sm">Connect here Bourbon Chaser. This will only need to be completed once.</span>
-              <a href="/api/auth/strava" className="btn-small inline-flex items-center">
+              <a href="/api/auth/strava" className="btn-small inline-flex items-center whitespace-nowrap">
                 <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M15.387 17.944l-2.089-4.116h-3.065L15.387 24l5.15-10.172h-3.066m-7.008-5.599l2.836 5.598h4.172L10.463 0l-7 13.828h4.169" />
                 </svg>
@@ -287,7 +287,7 @@ function HomeContent() {
                     Points are earned based on time spent in each heart rate zone during your activities.
                     The higher the zone, the more points per minute you earn.
                   </p>
-                  <div className="grid grid-cols-5 gap-3">
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3">
                     {[
                       { zone: 'I', points: '1', color: 'zone-1' },
                       { zone: 'II', points: '2', color: 'zone-2' },
@@ -295,8 +295,8 @@ function HomeContent() {
                       { zone: 'IV', points: '4', color: 'zone-4' },
                       { zone: 'V', points: '5', color: 'zone-5' },
                     ].map((item, idx) => (
-                      <div key={idx} className="bg-background border border-gold/20 p-4 text-center group hover:border-gold/50 transition-all duration-300">
-                        <div className={`text-lg font-display mb-2 ${
+                      <div key={idx} className="bg-background border border-gold/20 p-3 sm:p-4 text-center group hover:border-gold/50 transition-all duration-300">
+                        <div className={`text-sm sm:text-lg font-display mb-1 sm:mb-2 ${
                           idx === 0 ? 'text-zone-1' :
                           idx === 1 ? 'text-zone-2' :
                           idx === 2 ? 'text-zone-3' :
@@ -304,7 +304,7 @@ function HomeContent() {
                         }`}>
                           Zone {item.zone}
                         </div>
-                        <div className="text-3xl font-display gradient-text">{item.points}</div>
+                        <div className="text-2xl sm:text-3xl font-display gradient-text">{item.points}</div>
                         <div className="text-xs text-muted font-body uppercase tracking-wider mt-1">pt/min</div>
                       </div>
                     ))}
@@ -332,30 +332,30 @@ function HomeContent() {
                     <p className="text-muted mb-4 font-body">
                       A 60-minute run with the following zone distribution:
                     </p>
-                    <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
-                      <div className="text-center p-3 border border-gold/10">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 sm:gap-3 mb-4">
+                      <div className="text-center p-2 sm:p-3 border border-gold/10">
                         <div className="text-xs text-muted font-body uppercase mb-1">Zone I</div>
-                        <div className="font-body">10 min</div>
+                        <div className="font-body text-sm sm:text-base">10 min</div>
                         <div className="text-xs text-gold">= 10 pts</div>
                       </div>
-                      <div className="text-center p-3 border border-gold/10">
+                      <div className="text-center p-2 sm:p-3 border border-gold/10">
                         <div className="text-xs text-muted font-body uppercase mb-1">Zone II</div>
-                        <div className="font-body">20 min</div>
+                        <div className="font-body text-sm sm:text-base">20 min</div>
                         <div className="text-xs text-gold">= 40 pts</div>
                       </div>
-                      <div className="text-center p-3 border border-gold/10">
+                      <div className="text-center p-2 sm:p-3 border border-gold/10">
                         <div className="text-xs text-muted font-body uppercase mb-1">Zone III</div>
-                        <div className="font-body">25 min</div>
+                        <div className="font-body text-sm sm:text-base">25 min</div>
                         <div className="text-xs text-gold">= 75 pts</div>
                       </div>
-                      <div className="text-center p-3 border border-gold/10">
+                      <div className="text-center p-2 sm:p-3 border border-gold/10">
                         <div className="text-xs text-muted font-body uppercase mb-1">Zone IV</div>
-                        <div className="font-body">5 min</div>
+                        <div className="font-body text-sm sm:text-base">5 min</div>
                         <div className="text-xs text-gold">= 20 pts</div>
                       </div>
-                      <div className="text-center p-3 border border-gold/10">
+                      <div className="text-center p-2 sm:p-3 border border-gold/10">
                         <div className="text-xs text-muted font-body uppercase mb-1">Zone V</div>
-                        <div className="font-body">0 min</div>
+                        <div className="font-body text-sm sm:text-base">0 min</div>
                         <div className="text-xs text-gold">= 0 pts</div>
                       </div>
                     </div>
@@ -391,16 +391,16 @@ function HomeContent() {
         </div>
 
         {/* Leaderboard */}
-        <div className="card p-8">
-          <div className="flex items-center justify-between mb-8">
+        <div className="card p-4 sm:p-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-2">
             <div>
-              <h2 className="text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
                 Leaderboard
               </h2>
-              <div className="h-px w-24 bg-gold/30 mt-3"></div>
+              <div className="h-px w-24 bg-gold/30 mt-2 sm:mt-3"></div>
             </div>
             {!loading && leaderboard.length > 0 && (
-              <div className="text-sm text-muted font-body uppercase tracking-wider">
+              <div className="text-xs sm:text-sm text-muted font-body uppercase tracking-wider">
                 {leaderboard.length} {leaderboard.length === 1 ? 'athlete' : 'athletes'}
               </div>
             )}
@@ -428,141 +428,238 @@ function HomeContent() {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto -mx-8">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-gold/30">
-                    <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Rank</th>
-                    <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Athlete</th>
-                    <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Points</th>
-                    <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Behind</th>
-                    <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Activities</th>
-                    <th className="text-center py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {leaderboard.map((entry, index) => {
-                    const isSyncing = syncingAthletes.has(entry.athlete_id);
-                    const syncMessage = syncMessages.get(entry.athlete_id);
-                    const leaderPoints = leaderboard[0]?.total_points || 0;
-                    const pointsBehind = leaderPoints - entry.total_points;
+            <>
+              {/* Mobile card-based layout */}
+              <div className="md:hidden space-y-4">
+                {leaderboard.map((entry, index) => {
+                  const isSyncing = syncingAthletes.has(entry.athlete_id);
+                  const syncMessage = syncMessages.get(entry.athlete_id);
+                  const leaderPoints = leaderboard[0]?.total_points || 0;
+                  const pointsBehind = leaderPoints - entry.total_points;
 
-                    return (
-                      <tr
-                        key={entry.athlete_id}
-                        className="border-b border-gold/10 hover:bg-gold/5 transition-colors duration-300"
-                      >
-                        <td className="py-5 px-8">
-                          <div className="flex items-center">
-                            {index < 3 ? (
-                              <div className={`w-10 h-10 flex items-center justify-center border-2 rotate-45 ${
-                                index === 0 ? 'border-gold bg-gold/10' :
-                                index === 1 ? 'border-muted bg-muted/10' :
-                                'border-orange-700 bg-orange-700/10'
+                  return (
+                    <div
+                      key={entry.athlete_id}
+                      className="bg-background border border-gold/20 p-4 hover:border-gold/40 transition-all duration-300"
+                    >
+                      <div className="flex items-start justify-between mb-3">
+                        <div className="flex items-center gap-3">
+                          {index < 3 ? (
+                            <div className={`w-8 h-8 flex items-center justify-center border-2 rotate-45 flex-shrink-0 ${
+                              index === 0 ? 'border-gold bg-gold/10' :
+                              index === 1 ? 'border-muted bg-muted/10' :
+                              'border-orange-700 bg-orange-700/10'
+                            }`}>
+                              <span className={`-rotate-45 font-display text-sm ${
+                                index === 0 ? 'text-gold' :
+                                index === 1 ? 'text-muted' :
+                                'text-orange-700'
                               }`}>
-                                <span className={`-rotate-45 font-display text-lg ${
-                                  index === 0 ? 'text-gold' :
-                                  index === 1 ? 'text-muted' :
-                                  'text-orange-700'
-                                }`}>
-                                  {toRoman(index + 1)}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="font-display text-xl text-muted w-10 text-center">
                                 {toRoman(index + 1)}
                               </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-5 px-8">
+                            </div>
+                          ) : (
+                            <span className="font-display text-lg text-muted w-8 text-center flex-shrink-0">
+                              {toRoman(index + 1)}
+                            </span>
+                          )}
                           <Link
                             href={`/athlete/${entry.athlete_id}`}
-                            className="font-body font-semibold text-foreground text-lg hover:text-gold transition-colors duration-300 tracking-wide"
+                            className="font-body font-semibold text-foreground hover:text-gold transition-colors duration-300"
                             title="View Bourbon Chaser Athlete Profile"
                           >
                             {entry.firstname} {entry.lastname}
                           </Link>
-                          {syncMessage && (
-                            <div className="text-xs text-gold/80 mt-1 font-body">
-                              {syncMessage}
-                            </div>
-                          )}
-                        </td>
-                        <td className="py-5 px-8 text-right">
-                          <div className="text-3xl font-display gradient-text">
+                        </div>
+                        <div className="text-right">
+                          <div className="text-2xl font-display gradient-text">
                             {entry.total_points.toFixed(1)}
                           </div>
                           <div className="text-xs text-muted font-body uppercase tracking-wider">points</div>
-                        </td>
-                        <td className="py-5 px-8 text-right">
-                          {index === 0 ? (
-                            <div className="text-muted font-display">—</div>
-                          ) : (
-                            <div className="text-lg font-body text-orange-500">
-                              -{pointsBehind.toFixed(1)}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-3 border-t border-gold/10">
+                        <div className="flex gap-4 text-sm">
+                          <div>
+                            <span className="text-muted font-body">{entry.activity_count}</span>
+                            <span className="text-muted/60 font-body ml-1">{entry.activity_count === 1 ? 'activity' : 'activities'}</span>
+                          </div>
+                          {index > 0 && (
+                            <div className="text-orange-500 font-body">
+                              -{pointsBehind.toFixed(1)} behind
                             </div>
                           )}
-                        </td>
-                        <td className="py-5 px-8 text-right">
-                          <div className="text-xl font-display text-foreground">
-                            {entry.activity_count}
-                          </div>
-                          <div className="text-xs text-muted font-body uppercase tracking-wider">
-                            {entry.activity_count === 1 ? 'activity' : 'activities'}
-                          </div>
-                        </td>
-                        <td className="py-5 px-8 text-center">
-                          <button
-                            onClick={() => handleSyncAthlete(entry.athlete_id)}
-                            disabled={isSyncing}
-                            className="btn-small inline-flex items-center"
-                            title="Sync activities from Strava"
-                          >
-                            {isSyncing ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Syncing
-                              </>
-                            ) : (
-                              <>
-                                <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                </svg>
-                                Sync
-                              </>
+                        </div>
+                        <button
+                          onClick={() => handleSyncAthlete(entry.athlete_id)}
+                          disabled={isSyncing}
+                          className="btn-small inline-flex items-center text-xs px-3 py-1.5"
+                          title="Sync activities from Strava"
+                        >
+                          {isSyncing ? (
+                            <>
+                              <svg className="animate-spin h-3 w-3 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                              </svg>
+                              Syncing
+                            </>
+                          ) : (
+                            <>
+                              <svg className="h-3 w-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                              </svg>
+                              Sync
+                            </>
+                          )}
+                        </button>
+                      </div>
+                      {syncMessage && (
+                        <div className="text-xs text-gold/80 mt-2 font-body text-center">
+                          {syncMessage}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop table layout */}
+              <div className="hidden md:block overflow-x-auto -mx-8">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-gold/30">
+                      <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Rank</th>
+                      <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Athlete</th>
+                      <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Points</th>
+                      <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Behind</th>
+                      <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Activities</th>
+                      <th className="text-center py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaderboard.map((entry, index) => {
+                      const isSyncing = syncingAthletes.has(entry.athlete_id);
+                      const syncMessage = syncMessages.get(entry.athlete_id);
+                      const leaderPoints = leaderboard[0]?.total_points || 0;
+                      const pointsBehind = leaderPoints - entry.total_points;
+
+                      return (
+                        <tr
+                          key={entry.athlete_id}
+                          className="border-b border-gold/10 hover:bg-gold/5 transition-colors duration-300"
+                        >
+                          <td className="py-5 px-8">
+                            <div className="flex items-center">
+                              {index < 3 ? (
+                                <div className={`w-10 h-10 flex items-center justify-center border-2 rotate-45 ${
+                                  index === 0 ? 'border-gold bg-gold/10' :
+                                  index === 1 ? 'border-muted bg-muted/10' :
+                                  'border-orange-700 bg-orange-700/10'
+                                }`}>
+                                  <span className={`-rotate-45 font-display text-lg ${
+                                    index === 0 ? 'text-gold' :
+                                    index === 1 ? 'text-muted' :
+                                    'text-orange-700'
+                                  }`}>
+                                    {toRoman(index + 1)}
+                                  </span>
+                                </div>
+                              ) : (
+                                <span className="font-display text-xl text-muted w-10 text-center">
+                                  {toRoman(index + 1)}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="py-5 px-8">
+                            <Link
+                              href={`/athlete/${entry.athlete_id}`}
+                              className="font-body font-semibold text-foreground text-lg hover:text-gold transition-colors duration-300 tracking-wide"
+                              title="View Bourbon Chaser Athlete Profile"
+                            >
+                              {entry.firstname} {entry.lastname}
+                            </Link>
+                            {syncMessage && (
+                              <div className="text-xs text-gold/80 mt-1 font-body">
+                                {syncMessage}
+                              </div>
                             )}
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td className="py-5 px-8 text-right">
+                            <div className="text-3xl font-display gradient-text">
+                              {entry.total_points.toFixed(1)}
+                            </div>
+                            <div className="text-xs text-muted font-body uppercase tracking-wider">points</div>
+                          </td>
+                          <td className="py-5 px-8 text-right">
+                            {index === 0 ? (
+                              <div className="text-muted font-display">—</div>
+                            ) : (
+                              <div className="text-lg font-body text-orange-500">
+                                -{pointsBehind.toFixed(1)}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-5 px-8 text-right">
+                            <div className="text-xl font-display text-foreground">
+                              {entry.activity_count}
+                            </div>
+                            <div className="text-xs text-muted font-body uppercase tracking-wider">
+                              {entry.activity_count === 1 ? 'activity' : 'activities'}
+                            </div>
+                          </td>
+                          <td className="py-5 px-8 text-center">
+                            <button
+                              onClick={() => handleSyncAthlete(entry.athlete_id)}
+                              disabled={isSyncing}
+                              className="btn-small inline-flex items-center"
+                              title="Sync activities from Strava"
+                            >
+                              {isSyncing ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Syncing
+                                </>
+                              ) : (
+                                <>
+                                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                  </svg>
+                                  Sync
+                                </>
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
 
         {/* Weekly Performance Tracker */}
         {!loading && weeklyStats && weeklyStats.leaderboard.length > 0 && (
-          <div className="card p-8 mt-10">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
-                  This Week&apos;s Performance
-                </h2>
-                <div className="h-px w-32 bg-gold/30 mt-3"></div>
-                <p className="text-sm text-muted mt-3 font-body uppercase tracking-wider">
-                  {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                </p>
-              </div>
+          <div className="card p-4 sm:p-8 mt-8 sm:mt-10">
+            <div className="mb-6 sm:mb-8">
+              <h2 className="text-xl sm:text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
+                This Week&apos;s Performance
+              </h2>
+              <div className="h-px w-24 sm:w-32 bg-gold/30 mt-2 sm:mt-3"></div>
+              <p className="text-xs sm:text-sm text-muted mt-2 sm:mt-3 font-body uppercase tracking-wider">
+                {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+              </p>
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm text-muted font-body mb-4">Click on an athlete to view their weekly stats</p>
+              <p className="text-xs sm:text-sm text-muted font-body mb-4">Click on an athlete to view their weekly stats</p>
               {weeklyStats.leaderboard.slice(0, 5).map((entry: any, index: number) => {
                 const weeklyLeaderPoints = weeklyStats.leaderboard[0]?.total_points || 0;
                 const weeklyPointsBehind = weeklyLeaderPoints - entry.total_points;
@@ -572,34 +669,34 @@ function HomeContent() {
                   <div key={entry.athlete_id}>
                     <button
                       onClick={() => setSelectedWeeklyAthlete(isSelected ? null : entry.athlete_id)}
-                      className={`w-full flex items-center justify-between p-4 bg-background border transition-all duration-300 text-left ${
+                      className={`w-full flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-background border transition-all duration-300 text-left ${
                         isSelected ? 'border-gold bg-gold/5' : 'border-gold/20 hover:border-gold/40'
                       }`}
                     >
-                      <div className="flex items-center gap-4">
-                        <div className="font-display text-gold w-8">
+                      <div className="flex items-center gap-3 sm:gap-4 mb-2 sm:mb-0">
+                        <div className="font-display text-gold w-6 sm:w-8 text-sm sm:text-base">
                           {toRoman(index + 1)}.
                         </div>
-                        <span className="font-body font-semibold text-foreground">
+                        <span className="font-body font-semibold text-foreground text-sm sm:text-base">
                           {entry.firstname} {entry.lastname}
                         </span>
                       </div>
-                      <div className="flex items-center gap-6">
-                        <div className="text-right">
-                          <div className="text-xl font-display gradient-text">{entry.total_points.toFixed(1)}</div>
+                      <div className="flex items-center justify-between sm:justify-end gap-4 sm:gap-6 pl-9 sm:pl-0">
+                        <div className="text-left sm:text-right">
+                          <div className="text-lg sm:text-xl font-display gradient-text">{entry.total_points.toFixed(1)}</div>
                           <div className="text-xs text-muted font-body uppercase tracking-wider">pts</div>
                         </div>
                         {index > 0 && (
-                          <div className="text-right w-16">
+                          <div className="text-left sm:text-right">
                             <div className="text-sm font-body text-orange-500">-{weeklyPointsBehind.toFixed(1)}</div>
                           </div>
                         )}
-                        <div className="text-right w-12">
+                        <div className="text-left sm:text-right">
                           <div className="text-sm font-body text-muted">{entry.activity_count}</div>
                           <div className="text-xs text-muted/50">acts</div>
                         </div>
                         <svg
-                          className={`w-5 h-5 text-gold transition-transform duration-300 ${isSelected ? 'rotate-180' : ''}`}
+                          className={`w-5 h-5 text-gold transition-transform duration-300 flex-shrink-0 ${isSelected ? 'rotate-180' : ''}`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -611,37 +708,37 @@ function HomeContent() {
 
                     {/* Individual Athlete's Weekly Stats */}
                     {isSelected && (
-                      <div className="border border-t-0 border-gold/20 bg-background p-6 animate-fade-in-up">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="text-lg font-display text-gold tracking-wider uppercase">
+                      <div className="border border-t-0 border-gold/20 bg-background p-4 sm:p-6 animate-fade-in-up">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-2">
+                          <h4 className="text-base sm:text-lg font-display text-gold tracking-wider uppercase">
                             {entry.firstname}&apos;s Week
                           </h4>
                           <Link
                             href={`/athlete/${entry.athlete_id}`}
-                            className="text-sm text-gold hover:text-gold-light font-body uppercase tracking-wider transition-colors"
+                            className="text-xs sm:text-sm text-gold hover:text-gold-light font-body uppercase tracking-wider transition-colors"
                           >
-                            View Bourbon Chaser Athlete Profile →
+                            View Profile →
                           </Link>
                         </div>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                          <div className="bg-card border border-gold/10 p-4 text-center">
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                          <div className="bg-card border border-gold/10 p-3 sm:p-4 text-center">
                             <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Activities</div>
-                            <div className="text-2xl font-display gradient-text">{entry.activity_count}</div>
+                            <div className="text-xl sm:text-2xl font-display gradient-text">{entry.activity_count}</div>
                           </div>
-                          <div className="bg-card border border-gold/10 p-4 text-center">
+                          <div className="bg-card border border-gold/10 p-3 sm:p-4 text-center">
                             <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Points</div>
-                            <div className="text-2xl font-display gradient-text">{entry.total_points.toFixed(1)}</div>
+                            <div className="text-xl sm:text-2xl font-display gradient-text">{entry.total_points.toFixed(1)}</div>
                           </div>
-                          <div className="bg-card border border-gold/10 p-4 text-center">
+                          <div className="bg-card border border-gold/10 p-3 sm:p-4 text-center">
                             <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Distance</div>
-                            <div className="text-2xl font-display text-foreground">
+                            <div className="text-xl sm:text-2xl font-display text-foreground">
                               {((entry.total_distance_m || 0) / 1609.34).toFixed(1)}
                             </div>
                             <div className="text-xs text-muted">miles</div>
                           </div>
-                          <div className="bg-card border border-gold/10 p-4 text-center">
+                          <div className="bg-card border border-gold/10 p-3 sm:p-4 text-center">
                             <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Time</div>
-                            <div className="text-2xl font-display text-foreground">
+                            <div className="text-xl sm:text-2xl font-display text-foreground">
                               {Math.floor((entry.total_time_s || 0) / 3600)}h {Math.floor(((entry.total_time_s || 0) % 3600) / 60)}m
                             </div>
                           </div>
@@ -657,37 +754,37 @@ function HomeContent() {
       </main>
 
       {/* Art Deco Footer */}
-      <footer className="mt-20 py-12 bg-card border-t border-gold/20">
-        <div className="max-w-6xl mx-auto px-6">
+      <footer className="mt-12 sm:mt-20 py-8 sm:py-12 bg-card border-t border-gold/20">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6">
           {/* Top decorative line */}
-          <div className="flex items-center justify-center gap-4 mb-10">
-            <div className="h-px w-16 bg-gold/30"></div>
-            <div className="w-2 h-2 border border-gold/50 rotate-45"></div>
-            <div className="h-px w-16 bg-gold/30"></div>
+          <div className="flex items-center justify-center gap-3 sm:gap-4 mb-6 sm:mb-10">
+            <div className="h-px w-12 sm:w-16 bg-gold/30"></div>
+            <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 border border-gold/50 rotate-45"></div>
+            <div className="h-px w-12 sm:w-16 bg-gold/30"></div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 sm:gap-8">
+            <div className="flex items-center gap-4 sm:gap-6">
               <div className="double-frame">
                 <div className="double-frame-inner">
                   <img
                     src="/images/ironman_logo.png"
                     alt="Ironman"
-                    className="h-12 w-auto"
+                    className="h-10 sm:h-12 w-auto"
                   />
                 </div>
               </div>
               <div>
-                <p className="font-display text-xl tracking-wider uppercase text-foreground">Bourbon Chasers</p>
-                <p className="text-sm text-muted font-body mt-1">Powered by caffeine and poor decisions</p>
+                <p className="font-display text-lg sm:text-xl tracking-wider uppercase text-foreground">Bourbon Chasers</p>
+                <p className="text-xs sm:text-sm text-muted font-body mt-1">Powered by caffeine and poor decisions</p>
               </div>
             </div>
             <div className="text-center md:text-right">
-              <p className="text-muted text-sm font-body tracking-wide uppercase">
+              <p className="text-muted text-xs sm:text-sm font-body tracking-wide uppercase">
                 Training for Ironman 70.3 Chattanooga
               </p>
-              <p className="text-muted/50 text-xs mt-2 font-body tracking-wider">
-                &copy; MMXXIV-MMXXVI Bourbon Chasers Training Championship
+              <p className="text-muted/50 text-xs mt-1 sm:mt-2 font-body tracking-wider">
+                &copy; MMXXIV-MMXXVI Bourbon Chasers
               </p>
             </div>
           </div>
