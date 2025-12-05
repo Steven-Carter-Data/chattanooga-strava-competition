@@ -3,6 +3,10 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { getAthleteAccessToken } from '@/lib/strava';
 import { fetchAthleteZones, calculateHRZonesWithCustomBoundaries } from '@/lib/strava-zones';
 
+// Activity types excluded from the competition
+// These activities will not be synced or count toward points
+const EXCLUDED_ACTIVITY_TYPES = ['Walk'];
+
 /**
  * POST /api/sync/[athleteId]
  * Manually sync activities for a specific athlete from Strava
@@ -120,6 +124,14 @@ export async function POST(
     // Process each activity
     for (const activity of activities) {
       try {
+        // Filter out excluded activity types (e.g., Walk)
+        const activityType = activity.sport_type || activity.type;
+        if (EXCLUDED_ACTIVITY_TYPES.includes(activityType)) {
+          console.log(`Skipping activity ${activity.id} - excluded type: ${activityType}`);
+          skippedCount++;
+          continue;
+        }
+
         // Filter activities by competition date range
         const activityDate = new Date(activity.start_date);
         if (activityDate < competitionStartDate || activityDate > competitionEndDate) {

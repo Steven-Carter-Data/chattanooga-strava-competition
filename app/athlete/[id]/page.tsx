@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
+import WeeklyProgressChart from '@/app/components/WeeklyProgressChart';
 
 // Helper function to convert number to Roman numeral
 function toRoman(num: number): string {
@@ -299,6 +300,11 @@ export default function AthletePage() {
           <p className="text-xs sm:text-sm text-muted font-body mt-2 sm:mt-3 tracking-wide">
             Manually fetch and sync your latest activities from Strava
           </p>
+        </div>
+
+        {/* Weekly Progress Chart */}
+        <div className="mb-8 sm:mb-10">
+          <WeeklyProgressChart athleteId={athleteId} />
         </div>
 
         {/* HR Zone Configuration (from Strava) */}

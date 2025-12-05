@@ -9,6 +9,10 @@ import {
 } from '@/lib/strava';
 import { StravaWebhookEvent } from '@/lib/types';
 
+// Activity types excluded from the competition
+// These activities will not be synced or count toward points
+const EXCLUDED_ACTIVITY_TYPES = ['Walk'];
+
 /**
  * GET handler for Strava webhook verification
  * Strava sends a GET request with hub.mode, hub.challenge, and hub.verify_token
@@ -117,6 +121,13 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
 
   if (!activity) {
     console.error(`Failed to fetch activity ${activityId}`);
+    return;
+  }
+
+  // Filter out excluded activity types (e.g., Walk)
+  const activityType = activity.sport_type || activity.type;
+  if (EXCLUDED_ACTIVITY_TYPES.includes(activityType)) {
+    console.log(`Skipping activity ${activityId} - excluded type: ${activityType}`);
     return;
   }
 
