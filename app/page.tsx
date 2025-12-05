@@ -465,9 +465,12 @@ function HomeContent() {
                           )}
                           <Link
                             href={`/athlete/${entry.athlete_id}`}
-                            className="font-body font-semibold text-foreground hover:text-gold transition-colors duration-300"
+                            className="ripple-link-animated font-body font-semibold text-foreground hover:text-gold transition-colors duration-300"
                             title="View Bourbon Chaser Athlete Profile"
                           >
+                            <span className="ripple-ring"></span>
+                            <span className="ripple-ring"></span>
+                            <span className="ripple-ring"></span>
                             {entry.firstname} {entry.lastname}
                           </Link>
                         </div>
@@ -576,9 +579,12 @@ function HomeContent() {
                           <td className="py-5 px-8">
                             <Link
                               href={`/athlete/${entry.athlete_id}`}
-                              className="font-body font-semibold text-foreground text-lg hover:text-gold transition-colors duration-300 tracking-wide"
+                              className="ripple-link-animated font-body font-semibold text-foreground text-lg hover:text-gold transition-colors duration-300 tracking-wide"
                               title="View Bourbon Chaser Athlete Profile"
                             >
+                              <span className="ripple-ring"></span>
+                              <span className="ripple-ring"></span>
+                              <span className="ripple-ring"></span>
                               {entry.firstname} {entry.lastname}
                             </Link>
                             {syncMessage && (

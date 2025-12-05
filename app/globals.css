@@ -309,6 +309,93 @@ h1, h2, h3, h4, h5, h6, .heading-font {
   animation: goldPulse 2s ease-in-out infinite;
 }
 
+/* Ripple link effect for athlete names */
+.ripple-link {
+  position: relative;
+  display: inline-block;
+  overflow: visible;
+}
+
+.ripple-link::before,
+.ripple-link::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ripple-link::before {
+  border: 2px solid var(--gold);
+  transition: width 0.4s ease-out, height 0.4s ease-out, opacity 0.4s ease-out;
+}
+
+.ripple-link::after {
+  border: 1px solid var(--gold);
+  transition: width 0.5s ease-out 0.05s, height 0.5s ease-out 0.05s, opacity 0.5s ease-out 0.05s;
+}
+
+.ripple-link:hover::before {
+  width: 120%;
+  height: 300%;
+  opacity: 0.6;
+}
+
+.ripple-link:hover::after {
+  width: 160%;
+  height: 400%;
+  opacity: 0.3;
+}
+
+/* Alternative: Ripple rings that animate outward continuously on hover */
+@keyframes rippleOut {
+  0% {
+    width: 0;
+    height: 0;
+    opacity: 0.8;
+  }
+  100% {
+    width: 200%;
+    height: 500%;
+    opacity: 0;
+  }
+}
+
+.ripple-link-animated {
+  position: relative;
+  display: inline-block;
+}
+
+.ripple-link-animated .ripple-ring {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  border: 2px solid var(--gold);
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  opacity: 0;
+}
+
+.ripple-link-animated:hover .ripple-ring {
+  animation: rippleOut 0.8s ease-out forwards;
+}
+
+.ripple-link-animated:hover .ripple-ring:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.ripple-link-animated:hover .ripple-ring:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
 /* Scrollbar styling for Art Deco */
 ::-webkit-scrollbar {
   width: 8px;
