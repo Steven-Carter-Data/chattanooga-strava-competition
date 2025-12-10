@@ -77,6 +77,7 @@ export default function AthletePage() {
   const [error, setError] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
+  const [recentActivitiesExpanded, setRecentActivitiesExpanded] = useState(false);
 
   useEffect(() => {
     async function fetchAthleteData() {
@@ -454,15 +455,32 @@ export default function AthletePage() {
           </div>
         )}
 
-        {/* Recent Activities */}
+        {/* Recent Activities - Collapsible */}
         {data.recent_activities.length > 0 && (
           <div className="card p-4 sm:p-8">
-            <h2 className="text-lg sm:text-2xl md:text-3xl font-display mb-2 gradient-text tracking-wider uppercase">
-              Recent Activities
-            </h2>
-            <div className="h-px w-32 sm:w-48 bg-gold/30 mb-6 sm:mb-8"></div>
+            <button
+              onClick={() => setRecentActivitiesExpanded(!recentActivitiesExpanded)}
+              className="w-full flex items-center justify-between text-left focus:outline-none group"
+            >
+              <div>
+                <h2 className="text-lg sm:text-2xl md:text-3xl font-display mb-2 gradient-text tracking-wider uppercase">
+                  Recent Activities
+                </h2>
+                <div className="h-px w-32 sm:w-48 bg-gold/30"></div>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-muted font-body">
+                  {data.recent_activities.length} activities
+                </span>
+                <div className={`diamond-frame w-8 h-8 sm:w-10 sm:h-10 transition-transform duration-300 ${recentActivitiesExpanded ? 'rotate-180' : ''}`}>
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+              </div>
+            </button>
 
-            <div className="space-y-4">
+            <div className={`space-y-4 overflow-hidden transition-all duration-500 ease-in-out ${recentActivitiesExpanded ? 'mt-6 sm:mt-8 max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'}`}>
               {data.recent_activities.map((activity) => {
                 const activityZoneTime = {
                   zone_1: activity.zone_1_time_s || 0,
