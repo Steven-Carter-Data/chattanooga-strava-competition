@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -91,7 +91,7 @@ function formatSportType(sport: string): string {
   return sport.replace(/([A-Z])/g, ' $1').trim();
 }
 
-export default function ComparePage() {
+function CompareContent() {
   const searchParams = useSearchParams();
   const [athletes, setAthletes] = useState<SimpleAthlete[]>([]);
   const [selectedAthlete1, setSelectedAthlete1] = useState<string>('');
@@ -457,5 +457,19 @@ export default function ComparePage() {
         </div>
       </footer>
     </div>
+  );
+}
+
+export default function ComparePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="diamond-frame animate-gold-pulse">
+          <div className="w-6 h-6 border-2 border-gold border-t-transparent animate-spin"></div>
+        </div>
+      </div>
+    }>
+      <CompareContent />
+    </Suspense>
   );
 }
