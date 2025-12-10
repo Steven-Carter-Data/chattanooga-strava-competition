@@ -4,6 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LeaderboardEntry } from '@/lib/types';
+import CompetitionProgress from '@/app/components/CompetitionProgress';
 
 // Helper function to convert number to Roman numeral
 function toRoman(num: number): string {
@@ -29,10 +30,10 @@ function HomeContent() {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [syncingAthletes, setSyncingAthletes] = useState<Set<string>>(new Set());
-  const [syncMessages, setSyncMessages] = useState<Map<string, string>>(new Map());
   const [showScoringInfo, setShowScoringInfo] = useState(false);
   const [selectedWeeklyAthlete, setSelectedWeeklyAthlete] = useState<string | null>(null);
+  const [syncingAll, setSyncingAll] = useState(false);
+  const [syncAllMessage, setSyncAllMessage] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchData() {
@@ -60,77 +61,58 @@ function HomeContent() {
     fetchData();
   }, []);
 
-  async function handleSyncAthlete(athleteId: string) {
-    setSyncingAthletes(prev => new Set(prev).add(athleteId));
-    setSyncMessages(prev => {
-      const newMap = new Map(prev);
-      newMap.delete(athleteId);
-      return newMap;
-    });
+  async function handleSyncAllAthletes() {
+    if (leaderboard.length === 0) return;
 
-    try {
-      const response = await fetch(`/api/sync/${athleteId}`, {
-        method: 'POST',
-      });
-      const result = await response.json();
+    setSyncingAll(true);
+    setSyncAllMessage(null);
 
-      if (result.success) {
-        setSyncMessages(prev => {
-          const newMap = new Map(prev);
-          newMap.set(athleteId, `Synced ${result.synced} activities!`);
-          return newMap;
+    let totalSynced = 0;
+    let failedCount = 0;
+
+    for (const athlete of leaderboard) {
+      try {
+        const response = await fetch(`/api/sync/${athlete.athlete_id}`, {
+          method: 'POST',
         });
+        const result = await response.json();
 
-        // Refresh leaderboard and weekly stats after 2 seconds
-        setTimeout(async () => {
-          const leaderboardResponse = await fetch('/api/leaderboard');
-          const leaderboardData = await leaderboardResponse.json();
-          if (leaderboardData.success) {
-            setLeaderboard(leaderboardData.data);
-          }
-
-          const weeklyResponse = await fetch('/api/weekly-stats');
-          const weeklyData = await weeklyResponse.json();
-          if (weeklyData.success) {
-            setWeeklyStats(weeklyData.data);
-          }
-
-          // Clear message after another 2 seconds
-          setTimeout(() => {
-            setSyncMessages(prev => {
-              const newMap = new Map(prev);
-              newMap.delete(athleteId);
-              return newMap;
-            });
-          }, 2000);
-        }, 2000);
-      } else {
-        // Show detailed error information
-        const errorMsg = result.details
-          ? `${result.error} (${result.details})`
-          : result.error;
-        setSyncMessages(prev => {
-          const newMap = new Map(prev);
-          newMap.set(athleteId, `Sync failed: ${errorMsg}`);
-          return newMap;
-        });
-        // Log full error details to console for debugging
-        console.error('Sync error details:', result);
+        if (result.success) {
+          totalSynced += result.synced;
+        } else {
+          failedCount++;
+        }
+      } catch (err) {
+        failedCount++;
+        console.error(`Failed to sync ${athlete.firstname}:`, err);
       }
-    } catch (err) {
-      setSyncMessages(prev => {
-        const newMap = new Map(prev);
-        newMap.set(athleteId, 'Sync failed');
-        return newMap;
-      });
-      console.error(err);
-    } finally {
-      setSyncingAthletes(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(athleteId);
-        return newSet;
-      });
     }
+
+    // Refresh data
+    const leaderboardResponse = await fetch('/api/leaderboard');
+    const leaderboardData = await leaderboardResponse.json();
+    if (leaderboardData.success) {
+      setLeaderboard(leaderboardData.data);
+    }
+
+    const weeklyResponse = await fetch('/api/weekly-stats');
+    const weeklyData = await weeklyResponse.json();
+    if (weeklyData.success) {
+      setWeeklyStats(weeklyData.data);
+    }
+
+    setSyncingAll(false);
+
+    if (failedCount > 0) {
+      setSyncAllMessage(`Synced ${totalSynced} activities (${failedCount} athlete${failedCount > 1 ? 's' : ''} failed)`);
+    } else {
+      setSyncAllMessage(`Synced ${totalSynced} new activities for all athletes!`);
+    }
+
+    // Clear message after 5 seconds
+    setTimeout(() => {
+      setSyncAllMessage(null);
+    }, 5000);
   }
 
   return (
@@ -248,6 +230,9 @@ function HomeContent() {
             </div>
           </div>
         </div>
+
+        {/* Competition Progress Indicator */}
+        <CompetitionProgress />
 
         {/* Scoring Information - Collapsible */}
         <div className="card p-6 mb-10">
@@ -400,11 +385,58 @@ function HomeContent() {
               <div className="h-px w-24 bg-gold/30 mt-2 sm:mt-3"></div>
             </div>
             {!loading && leaderboard.length > 0 && (
-              <div className="text-xs sm:text-sm text-muted font-body uppercase tracking-wider">
-                {leaderboard.length} {leaderboard.length === 1 ? 'athlete' : 'athletes'}
+              <div className="flex items-center gap-2 sm:gap-4">
+                <button
+                  onClick={handleSyncAllAthletes}
+                  disabled={syncingAll}
+                  className="btn-primary inline-flex items-center text-xs sm:text-sm px-3 sm:px-4 py-1.5 sm:py-2"
+                >
+                  {syncingAll ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4 mr-1.5 sm:mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      <span className="hidden sm:inline">Syncing All...</span>
+                      <span className="sm:hidden">Syncing...</span>
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4 mr-1.5 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      <span className="hidden sm:inline">Sync All Athletes</span>
+                      <span className="sm:hidden">Sync All</span>
+                    </>
+                  )}
+                </button>
+                <Link
+                  href="/compare"
+                  className="btn-small inline-flex items-center"
+                >
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                  Compare
+                </Link>
+                <div className="text-xs sm:text-sm text-muted font-body uppercase tracking-wider hidden sm:block">
+                  {leaderboard.length} {leaderboard.length === 1 ? 'athlete' : 'athletes'}
+                </div>
               </div>
             )}
           </div>
+
+          {/* Sync All Message */}
+          {syncAllMessage && (
+            <div className="mb-6 p-4 bg-background border border-gold/30 flex items-center gap-3">
+              <div className="diamond-frame flex-shrink-0">
+                <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <p className="text-foreground font-body text-sm">{syncAllMessage}</p>
+            </div>
+          )}
 
           {loading ? (
             <div className="text-center py-16">
@@ -432,8 +464,6 @@ function HomeContent() {
               {/* Mobile card-based layout */}
               <div className="md:hidden space-y-4">
                 {leaderboard.map((entry, index) => {
-                  const isSyncing = syncingAthletes.has(entry.athlete_id);
-                  const syncMessage = syncMessages.get(entry.athlete_id);
                   const leaderPoints = leaderboard[0]?.total_points || 0;
                   const pointsBehind = leaderPoints - entry.total_points;
 
@@ -494,35 +524,7 @@ function HomeContent() {
                             </div>
                           )}
                         </div>
-                        <button
-                          onClick={() => handleSyncAthlete(entry.athlete_id)}
-                          disabled={isSyncing}
-                          className="btn-small inline-flex items-center text-xs px-3 py-1.5"
-                          title="Sync activities from Strava"
-                        >
-                          {isSyncing ? (
-                            <>
-                              <svg className="animate-spin h-3 w-3 mr-1.5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                              </svg>
-                              Syncing
-                            </>
-                          ) : (
-                            <>
-                              <svg className="h-3 w-3 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                              </svg>
-                              Sync
-                            </>
-                          )}
-                        </button>
                       </div>
-                      {syncMessage && (
-                        <div className="text-xs text-gold/80 mt-2 font-body text-center">
-                          {syncMessage}
-                        </div>
-                      )}
                     </div>
                   );
                 })}
@@ -538,13 +540,10 @@ function HomeContent() {
                       <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Points</th>
                       <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Behind</th>
                       <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Activities</th>
-                      <th className="text-center py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {leaderboard.map((entry, index) => {
-                      const isSyncing = syncingAthletes.has(entry.athlete_id);
-                      const syncMessage = syncMessages.get(entry.athlete_id);
                       const leaderPoints = leaderboard[0]?.total_points || 0;
                       const pointsBehind = leaderPoints - entry.total_points;
 
@@ -587,11 +586,6 @@ function HomeContent() {
                               <span className="ripple-ring"></span>
                               {entry.firstname} {entry.lastname}
                             </Link>
-                            {syncMessage && (
-                              <div className="text-xs text-gold/80 mt-1 font-body">
-                                {syncMessage}
-                              </div>
-                            )}
                           </td>
                           <td className="py-5 px-8 text-right">
                             <div className="text-3xl font-display gradient-text">
@@ -615,31 +609,6 @@ function HomeContent() {
                             <div className="text-xs text-muted font-body uppercase tracking-wider">
                               {entry.activity_count === 1 ? 'activity' : 'activities'}
                             </div>
-                          </td>
-                          <td className="py-5 px-8 text-center">
-                            <button
-                              onClick={() => handleSyncAthlete(entry.athlete_id)}
-                              disabled={isSyncing}
-                              className="btn-small inline-flex items-center"
-                              title="Sync activities from Strava"
-                            >
-                              {isSyncing ? (
-                                <>
-                                  <svg className="animate-spin h-4 w-4 mr-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                  Syncing
-                                </>
-                              ) : (
-                                <>
-                                  <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                                  </svg>
-                                  Sync
-                                </>
-                              )}
-                            </button>
                           </td>
                         </tr>
                       );

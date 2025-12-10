@@ -4,6 +4,11 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import WeeklyProgressChart from '@/app/components/WeeklyProgressChart';
+import PersonalBests from '@/app/components/PersonalBests';
+import AthleteRadarChart from '@/app/components/AthleteRadarChart';
+import PaceAnalysis from '@/app/components/PaceAnalysis';
+import TrainingLoadGraph from '@/app/components/TrainingLoadGraph';
+import TrainingInsights from '@/app/components/TrainingInsights';
 
 // Helper function to convert number to Roman numeral
 function toRoman(num: number): string {
@@ -306,6 +311,21 @@ export default function AthletePage() {
         <div className="mb-8 sm:mb-10">
           <WeeklyProgressChart athleteId={athleteId} />
         </div>
+
+        {/* Personal Bests / PR Tracking */}
+        <PersonalBests athleteId={athleteId} />
+
+        {/* Training Profile Radar Chart */}
+        <AthleteRadarChart athleteId={athleteId} />
+
+        {/* Pace Analysis */}
+        <PaceAnalysis athleteId={athleteId} />
+
+        {/* Training Insights - Sport Balance & Race Readiness */}
+        <TrainingInsights athleteId={athleteId} />
+
+        {/* Training Load Graph */}
+        <TrainingLoadGraph athleteId={athleteId} />
 
         {/* HR Zone Configuration (from Strava) */}
         {data.athlete.hr_zones && (
