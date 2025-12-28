@@ -128,6 +128,57 @@ export default function AthletePage() {
     }
   }
 
+  function handleExportData() {
+    if (!data) return;
+
+    // Build CSV content
+    const headers = [
+      'Activity Name',
+      'Sport Type',
+      'Date',
+      'Distance (mi)',
+      'Moving Time (min)',
+      'Avg HR',
+      'Zone Points',
+      'Zone 1 (min)',
+      'Zone 2 (min)',
+      'Zone 3 (min)',
+      'Zone 4 (min)',
+      'Zone 5 (min)',
+    ];
+
+    const rows = data.recent_activities.map((activity) => [
+      `"${(activity.name || '').replace(/"/g, '""')}"`,
+      activity.sport_type || '',
+      new Date(activity.start_date).toLocaleDateString('en-US'),
+      ((activity.distance_m || 0) / 1609.34).toFixed(2),
+      Math.round((activity.moving_time_s || 0) / 60),
+      activity.average_heartrate ? Math.round(activity.average_heartrate) : '',
+      (activity.zone_points || 0).toFixed(1),
+      Math.round((activity.zone_1_time_s || 0) / 60),
+      Math.round((activity.zone_2_time_s || 0) / 60),
+      Math.round((activity.zone_3_time_s || 0) / 60),
+      Math.round((activity.zone_4_time_s || 0) / 60),
+      Math.round((activity.zone_5_time_s || 0) / 60),
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.join(','))
+    ].join('\n');
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `${data.athlete.firstname}_${data.athlete.lastname}_activities.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -277,8 +328,8 @@ export default function AthletePage() {
           </div>
         </div>
 
-        {/* Sync Button */}
-        <div className="mb-8 sm:mb-10">
+        {/* Action Buttons */}
+        <div className="mb-8 sm:mb-10 flex flex-wrap gap-3 sm:gap-4">
           <button
             onClick={handleSyncActivities}
             disabled={syncing}
@@ -303,9 +354,17 @@ export default function AthletePage() {
               </>
             )}
           </button>
-          <p className="text-xs sm:text-sm text-muted font-body mt-2 sm:mt-3 tracking-wide">
-            Manually fetch and sync your latest activities from Strava
-          </p>
+
+          <button
+            onClick={handleExportData}
+            className="btn-small inline-flex items-center text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
+          >
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+            <span className="hidden sm:inline">Export Data (CSV)</span>
+            <span className="sm:hidden">Export CSV</span>
+          </button>
         </div>
 
         {/* Weekly Progress Chart */}
