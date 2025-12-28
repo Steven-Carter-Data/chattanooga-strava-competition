@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
 
 /**
  * GET /api/competition-progress
@@ -10,12 +10,8 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET() {
   try {
-    // Get competition config
-    const { data: config, error: configError } = await supabase
-      .from('competition_config')
-      .select('*')
-      .eq('is_active', true)
-      .single();
+    // Get competition config (automatically selects based on current date)
+    const { data: config, error: configError } = await getActiveCompetitionConfig(supabase);
 
     if (configError || !config) {
       return NextResponse.json(

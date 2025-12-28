@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import { getAthleteAccessToken } from '@/lib/strava';
 import { fetchAthleteZones, calculateHRZonesWithCustomBoundaries } from '@/lib/strava-zones';
 
@@ -64,13 +64,10 @@ export async function POST(
         .eq('id', athleteId);
     }
 
-    // Get competition config
-    const { data: config } = await supabaseAdmin
-      .from('competition_config')
-      .select('*')
-      .single();
+    // Get competition config (automatically selects based on current date)
+    const { data: config, error: configError } = await getActiveCompetitionConfig(supabaseAdmin);
 
-    if (!config) {
+    if (configError || !config) {
       return NextResponse.json(
         { error: 'Competition config not found' },
         { status: 500 }

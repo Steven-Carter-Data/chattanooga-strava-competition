@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
+import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
 
 /**
  * GET /api/athlete/[id]/weekly-history
@@ -28,17 +28,13 @@ export async function GET(
       );
     }
 
-    // Get competition config to determine date range
-    const { data: competitionConfig } = await supabase
-      .from('competition_config')
-      .select('start_date, end_date')
-      .eq('is_active', true)
-      .single();
+    // Get competition config to determine date range (automatically selects based on current date)
+    const { data: competitionConfig } = await getActiveCompetitionConfig(supabase);
 
     // Default to reasonable date range if no config
     const competitionStart = competitionConfig?.start_date
       ? new Date(competitionConfig.start_date)
-      : new Date('2025-11-19'); // Testing period start
+      : new Date('2025-11-18'); // Testing period start
 
     const now = new Date();
 
