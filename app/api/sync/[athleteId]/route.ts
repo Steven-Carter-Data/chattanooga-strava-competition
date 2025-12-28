@@ -117,7 +117,8 @@ export async function POST(
 
     const activities = await stravaResponse.json();
 
-    let syncedCount = 0;
+    let newCount = 0;
+    let existingCount = 0;
     let errorCount = 0;
     let skippedCount = 0;
 
@@ -148,13 +149,13 @@ export async function POST(
           .single();
 
         if (existingActivity) {
-          // Activity already exists, update it
-          await updateActivity(activity, athlete.id, accessToken, athleteZones);
-          syncedCount++;
+          // Activity already exists, skip it (no need to re-sync)
+          existingCount++;
+          continue;
         } else {
           // New activity, insert it
           await insertActivity(activity, athlete.id, accessToken, athleteZones);
-          syncedCount++;
+          newCount++;
         }
       } catch (error) {
         console.error(`Error processing activity ${activity.id}:`, error);
@@ -164,8 +165,11 @@ export async function POST(
 
     return NextResponse.json({
       success: true,
-      message: `Synced ${syncedCount} activities (${skippedCount} skipped outside competition dates)`,
-      synced: syncedCount,
+      message: newCount > 0
+        ? `Synced ${newCount} new activities`
+        : 'All activities up to date',
+      synced: newCount,
+      existing: existingCount,
       skipped: skippedCount,
       errors: errorCount,
     });

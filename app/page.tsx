@@ -67,7 +67,7 @@ function HomeContent() {
     setSyncingAll(true);
     setSyncAllMessage(null);
 
-    let totalSynced = 0;
+    let totalNewActivities = 0;
     let failedCount = 0;
 
     for (const athlete of leaderboard) {
@@ -78,7 +78,7 @@ function HomeContent() {
         const result = await response.json();
 
         if (result.success) {
-          totalSynced += result.synced;
+          totalNewActivities += result.synced;
         } else {
           failedCount++;
         }
@@ -104,9 +104,11 @@ function HomeContent() {
     setSyncingAll(false);
 
     if (failedCount > 0) {
-      setSyncAllMessage(`Synced ${totalSynced} activities (${failedCount} athlete${failedCount > 1 ? 's' : ''} failed)`);
+      setSyncAllMessage(`Synced ${totalNewActivities} new activities (${failedCount} athlete${failedCount > 1 ? 's' : ''} failed)`);
+    } else if (totalNewActivities === 0) {
+      setSyncAllMessage('Leaderboard and activities are up to date!');
     } else {
-      setSyncAllMessage(`Synced ${totalSynced} new activities for all athletes!`);
+      setSyncAllMessage(`Synced ${totalNewActivities} new ${totalNewActivities === 1 ? 'activity' : 'activities'}!`);
     }
 
     // Clear message after 5 seconds
@@ -165,7 +167,7 @@ function HomeContent() {
 
             {/* Competition dates */}
             <p className="text-lg md:text-xl font-body font-semibold mb-3 text-gold tracking-wider uppercase">
-              January 1st - March 31st, 2026
+              January 1st - May 3rd, 2026
             </p>
 
             {/* Tagline */}
