@@ -78,6 +78,7 @@ export default function AthletePage() {
   const [syncing, setSyncing] = useState(false);
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [recentActivitiesExpanded, setRecentActivitiesExpanded] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     async function fetchAthleteData() {
@@ -128,55 +129,74 @@ export default function AthletePage() {
     }
   }
 
-  function handleExportData() {
+  async function handleExportData() {
     if (!data) return;
 
-    // Build CSV content
-    const headers = [
-      'Activity Name',
-      'Sport Type',
-      'Date',
-      'Distance (mi)',
-      'Moving Time (min)',
-      'Avg HR',
-      'Zone Points',
-      'Zone 1 (min)',
-      'Zone 2 (min)',
-      'Zone 3 (min)',
-      'Zone 4 (min)',
-      'Zone 5 (min)',
-    ];
+    setExporting(true);
+    try {
+      // Fetch ALL activities from the export endpoint
+      const response = await fetch(`/api/athlete/${athleteId}/export`);
+      const result = await response.json();
 
-    const rows = data.recent_activities.map((activity) => [
-      `"${(activity.name || '').replace(/"/g, '""')}"`,
-      activity.sport_type || '',
-      new Date(activity.start_date).toLocaleDateString('en-US'),
-      ((activity.distance_m || 0) / 1609.34).toFixed(2),
-      Math.round((activity.moving_time_s || 0) / 60),
-      activity.average_heartrate ? Math.round(activity.average_heartrate) : '',
-      (activity.zone_points || 0).toFixed(1),
-      Math.round((activity.zone_1_time_s || 0) / 60),
-      Math.round((activity.zone_2_time_s || 0) / 60),
-      Math.round((activity.zone_3_time_s || 0) / 60),
-      Math.round((activity.zone_4_time_s || 0) / 60),
-      Math.round((activity.zone_5_time_s || 0) / 60),
-    ]);
+      if (!result.success || !result.data.activities) {
+        console.error('Failed to fetch activities for export');
+        setExporting(false);
+        return;
+      }
 
-    const csvContent = [
-      headers.join(','),
-      ...rows.map(row => row.join(','))
-    ].join('\n');
+      const activities = result.data.activities;
 
-    // Create and download file
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `${data.athlete.firstname}_${data.athlete.lastname}_activities.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+      // Build CSV content
+      const headers = [
+        'Activity Name',
+        'Sport Type',
+        'Date',
+        'Distance (mi)',
+        'Moving Time (min)',
+        'Avg HR',
+        'Zone Points',
+        'Zone 1 (min)',
+        'Zone 2 (min)',
+        'Zone 3 (min)',
+        'Zone 4 (min)',
+        'Zone 5 (min)',
+      ];
+
+      const rows = activities.map((activity: any) => [
+        `"${(activity.name || '').replace(/"/g, '""')}"`,
+        activity.sport_type || '',
+        new Date(activity.start_date).toLocaleDateString('en-US'),
+        ((activity.distance_m || 0) / 1609.34).toFixed(2),
+        Math.round((activity.moving_time_s || 0) / 60),
+        activity.average_heartrate ? Math.round(activity.average_heartrate) : '',
+        (activity.zone_points || 0).toFixed(1),
+        Math.round((activity.zone_1_time_s || 0) / 60),
+        Math.round((activity.zone_2_time_s || 0) / 60),
+        Math.round((activity.zone_3_time_s || 0) / 60),
+        Math.round((activity.zone_4_time_s || 0) / 60),
+        Math.round((activity.zone_5_time_s || 0) / 60),
+      ]);
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map((row: any[]) => row.join(','))
+      ].join('\n');
+
+      // Create and download file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `${data.athlete.firstname}_${data.athlete.lastname}_activities.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (err) {
+      console.error('Export failed:', err);
+    } finally {
+      setExporting(false);
+    }
   }
 
   if (loading) {
@@ -357,13 +377,27 @@ export default function AthletePage() {
 
           <button
             onClick={handleExportData}
+            disabled={exporting}
             className="btn-small inline-flex items-center text-sm sm:text-base px-4 sm:px-6 py-2 sm:py-3"
           >
-            <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-            </svg>
-            <span className="hidden sm:inline">Export Data (CSV)</span>
-            <span className="sm:hidden">Export CSV</span>
+            {exporting ? (
+              <>
+                <svg className="animate-spin h-4 w-4 sm:h-5 sm:w-5 mr-2 sm:mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span className="hidden sm:inline">Exporting...</span>
+                <span className="sm:hidden">Exporting...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 sm:mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span className="hidden sm:inline">Export Data (CSV)</span>
+                <span className="sm:hidden">Export CSV</span>
+              </>
+            )}
           </button>
         </div>
 
