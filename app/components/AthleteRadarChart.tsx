@@ -32,10 +32,64 @@ interface RadarData {
   }>;
 }
 
+// Get qualitative rating based on normalized score
+function getQualitativeRating(score: number): { label: string; color: string } {
+  if (score >= 75) return { label: 'Strong', color: 'text-green-500' };
+  if (score >= 50) return { label: 'Good', color: 'text-blue-500' };
+  if (score >= 25) return { label: 'Building', color: 'text-yellow-500' };
+  return { label: 'Needs Work', color: 'text-red-500' };
+}
+
+// Detailed metric explanations
+const metricExplanations: Record<string, {
+  what: string;
+  calculation: string;
+  goodScore: string;
+  benchmark: string;
+}> = {
+  volume: {
+    what: 'Total weekly training hours averaged across your active period',
+    calculation: 'Total training time ÷ weeks active',
+    goodScore: '10+ hours/week = 100',
+    benchmark: 'Elite 70.3 athletes typically train 15-20+ hrs/week; recreational athletes 6-10 hrs/week',
+  },
+  intensity: {
+    what: 'How hard you train on average, measured by zone points earned per minute',
+    calculation: 'Total zone points ÷ total training minutes',
+    goodScore: '3+ points/minute = 100',
+    benchmark: 'Higher = more time in elevated HR zones; Zone 2-focused training typically scores 1.5-2.5',
+  },
+  consistency: {
+    what: 'How regularly you train (percentage of days with activities)',
+    calculation: 'Days with activities ÷ total days in period × 100',
+    goodScore: '66%+ active days = 100',
+    benchmark: 'Training 4-5 days/week = ~60-70% consistency',
+  },
+  endurance: {
+    what: 'Proportion of training time spent in Zone 2 (aerobic base building)',
+    calculation: 'Zone 2 time ÷ total HR zone time × 100',
+    goodScore: '66%+ Zone 2 time = 100',
+    benchmark: '80/20 rule: elite athletes spend 80% in Z1-Z2, 20% in Z3+',
+  },
+  power: {
+    what: 'High-intensity training focus (time in Zone 4 and Zone 5)',
+    calculation: '(Zone 4 + Zone 5 time) ÷ total HR zone time × 100',
+    goodScore: '33%+ high zone time = 100',
+    benchmark: 'For 70.3 racing, 10-20% high zone work is typical during build phase',
+  },
+  variety: {
+    what: 'Number of different sport types in your training',
+    calculation: 'Count of unique sport types',
+    goodScore: '5+ sports = 100',
+    benchmark: 'Core triathlon = 3 (swim, bike, run); cross-training adds strength, yoga, etc.',
+  },
+};
+
 export default function AthleteRadarChart({ athleteId }: { athleteId: string }) {
   const [data, setData] = useState<RadarData | null>(null);
   const [loading, setLoading] = useState(true);
   const [hoveredDimension, setHoveredDimension] = useState<string | null>(null);
+  const [showExplanation, setShowExplanation] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -228,6 +282,7 @@ export default function AthleteRadarChart({ athleteId }: { athleteId: string }) 
           {dimensions.map((dim) => {
             const value = normalized[dim.key as keyof typeof normalized] || 0;
             const isHovered = hoveredDimension === dim.key;
+            const rating = getQualitativeRating(value);
             return (
               <div
                 key={dim.key}
@@ -237,11 +292,15 @@ export default function AthleteRadarChart({ athleteId }: { athleteId: string }) 
                 onMouseEnter={() => setHoveredDimension(dim.key)}
                 onMouseLeave={() => setHoveredDimension(null)}
               >
-                <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-xs text-muted font-body uppercase tracking-wider">{dim.label}</span>
                   <span className={`text-lg font-display ${isHovered ? 'gradient-text' : 'text-foreground'}`}>
                     {Math.round(value)}
                   </span>
+                </div>
+                {/* Qualitative rating */}
+                <div className={`text-xs font-body uppercase tracking-wider mb-2 ${rating.color}`}>
+                  {rating.label}
                 </div>
                 {/* Progress bar */}
                 <div className="h-1.5 bg-background border border-gold/20 overflow-hidden">
@@ -280,6 +339,159 @@ export default function AthleteRadarChart({ athleteId }: { athleteId: string }) 
           </div>
         </div>
       )}
+
+      {/* Profile Metrics Explained - Collapsible */}
+      <div className="border-t border-gold/20 pt-4 mt-6">
+        <button
+          onClick={() => setShowExplanation(!showExplanation)}
+          className="w-full flex items-center justify-between text-left group"
+        >
+          <div className="flex items-center gap-2">
+            <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-sm font-body text-gold uppercase tracking-wider">
+              Understanding Your Profile
+            </span>
+          </div>
+          <svg
+            className={`w-5 h-5 text-gold transition-transform duration-300 ${showExplanation ? 'rotate-180' : ''}`}
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+
+        {showExplanation && (
+          <div className="mt-4 space-y-4 animate-fade-in-up">
+            {/* Rating Scale Legend */}
+            <div className="bg-background border border-gold/20 p-4">
+              <h4 className="text-sm font-display text-gold mb-3 uppercase tracking-wider">
+                Score Rating Scale
+              </h4>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-green-500"></div>
+                  <span className="text-xs font-body text-foreground">Strong (75-100)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-blue-500"></div>
+                  <span className="text-xs font-body text-foreground">Good (50-74)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-yellow-500"></div>
+                  <span className="text-xs font-body text-foreground">Building (25-49)</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 bg-red-500"></div>
+                  <span className="text-xs font-body text-foreground">Needs Work (0-24)</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Metric Details Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {dimensions.map((dim) => {
+                const explanation = metricExplanations[dim.key];
+                const value = normalized[dim.key as keyof typeof normalized] || 0;
+                const rating = getQualitativeRating(value);
+
+                // Get raw value for context
+                let rawValue = '';
+                if (rawStats) {
+                  switch (dim.key) {
+                    case 'volume':
+                      rawValue = `${rawStats.volumePerWeek.toFixed(1)} hrs/week`;
+                      break;
+                    case 'intensity':
+                      rawValue = `${rawStats.intensity.toFixed(2)} pts/min`;
+                      break;
+                    case 'consistency':
+                      rawValue = `${rawStats.consistency.toFixed(0)}% active days`;
+                      break;
+                    case 'endurance':
+                      rawValue = `${rawStats.enduranceRatio.toFixed(0)}% Zone 2`;
+                      break;
+                    case 'power':
+                      rawValue = `${rawStats.highZoneRatio.toFixed(0)}% Z4+Z5`;
+                      break;
+                    case 'variety':
+                      rawValue = `${rawStats.variety} sports`;
+                      break;
+                  }
+                }
+
+                return (
+                  <div key={dim.key} className="bg-background border border-gold/20 p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <h5 className="text-sm font-display text-gold uppercase tracking-wider">
+                        {dim.label}
+                      </h5>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-xs font-body uppercase ${rating.color}`}>{rating.label}</span>
+                        <span className="text-lg font-display text-foreground">{Math.round(value)}</span>
+                      </div>
+                    </div>
+
+                    {/* Your actual value */}
+                    {rawValue && (
+                      <div className="mb-3 px-2 py-1 bg-gold/5 border-l-2 border-gold">
+                        <span className="text-xs text-muted font-body">Your stats: </span>
+                        <span className="text-xs text-foreground font-body">{rawValue}</span>
+                      </div>
+                    )}
+
+                    {explanation && (
+                      <div className="space-y-2 text-xs font-body">
+                        <div>
+                          <span className="text-muted">What it measures: </span>
+                          <span className="text-foreground/80">{explanation.what}</span>
+                        </div>
+                        <div>
+                          <span className="text-muted">Max score: </span>
+                          <span className="text-foreground/80">{explanation.goodScore}</span>
+                        </div>
+                        <div className="pt-2 border-t border-gold/10">
+                          <span className="text-gold/70">Benchmark: </span>
+                          <span className="text-muted">{explanation.benchmark}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* How to read the radar chart */}
+            <div className="bg-background border border-gold/20 p-4">
+              <h4 className="text-sm font-display text-gold mb-3 uppercase tracking-wider">
+                How to Read Your Profile
+              </h4>
+              <div className="space-y-2 text-xs font-body text-foreground/80">
+                <p>
+                  The radar chart shows 6 dimensions of your training on a 0-100 scale.
+                  A larger, more balanced shape indicates well-rounded training.
+                </p>
+                <p>
+                  <strong className="text-gold">Balanced profile:</strong> All metrics between 40-80 suggests
+                  healthy training variety without overemphasis in any area.
+                </p>
+                <p>
+                  <strong className="text-gold">Specialist profile:</strong> Very high scores in some areas with
+                  lower scores in others may indicate targeted training focus.
+                </p>
+                <p className="text-muted/70 pt-2 border-t border-gold/10">
+                  <strong>Note:</strong> These metrics describe your training patterns, not performance predictions.
+                  Use them to identify areas to develop, but remember that optimal profiles vary by athlete
+                  and training phase.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
