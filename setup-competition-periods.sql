@@ -8,11 +8,11 @@
 -- Clear existing configs and insert both periods
 DELETE FROM competition_config;
 
--- Insert Testing Period (Nov 18 - Dec 31, 2025)
+-- Insert Testing Period (Nov 16 - Dec 31, 2025)
 INSERT INTO competition_config (name, start_date, end_date, is_active)
 VALUES (
   'Testing Period',
-  '2025-11-18T00:00:00Z',
+  '2025-11-16T00:00:00Z',
   '2025-12-31T23:59:59Z',
   true
 );
