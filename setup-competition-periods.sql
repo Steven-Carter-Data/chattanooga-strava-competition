@@ -1,5 +1,5 @@
 -- Setup Competition Periods
--- Run this in Supabase SQL Editor to configure both testing and competition periods
+-- Run this in Supabase SQL Editor to configure competition periods
 -- The app will automatically select the correct period based on current date
 
 -- First, remove the is_active constraint since we now use date-based selection
@@ -8,16 +8,16 @@
 -- Clear existing configs and insert both periods
 DELETE FROM competition_config;
 
--- Insert Testing Period (Nov 16 - Dec 31, 2025)
+-- Insert Pre-Season Period (Nov 16 - Dec 31, 2025)
 INSERT INTO competition_config (name, start_date, end_date, is_active)
 VALUES (
-  'Testing Period',
+  'Pre-Season',
   '2025-11-16T00:00:00Z',
   '2025-12-31T23:59:59Z',
   true
 );
 
--- Insert Competition Period (Jan 1 - May 3, 2026)
+-- Insert Main Competition Period (Jan 1 - May 3, 2026)
 INSERT INTO competition_config (name, start_date, end_date, is_active)
 VALUES (
   'Ironman 70.3 Training Championship',

@@ -34,7 +34,7 @@ export async function GET(
     // Default to reasonable date range if no config
     const competitionStart = competitionConfig?.start_date
       ? new Date(competitionConfig.start_date)
-      : new Date('2025-11-16'); // Testing period start
+      : new Date('2025-11-16'); // Pre-season start
 
     const now = new Date();
 

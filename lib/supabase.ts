@@ -15,7 +15,7 @@ export const supabaseAdmin = createClient(
 /**
  * Get the active competition config based on current date.
  * Automatically selects the appropriate period:
- * - Testing Period: Nov 16 - Dec 31, 2025
+ * - Pre-Season: Nov 16 - Dec 31, 2025
  * - Competition Period: Jan 1 - May 3, 2026
  *
  * Logic: Selects the config where current date falls within start_date and end_date,
