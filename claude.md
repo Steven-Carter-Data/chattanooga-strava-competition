@@ -4,8 +4,8 @@
 
 A gamified heart-rate-zone-based competition app for the "Bourbon Chasers" friend group preparing for Ironman 70.3 Chattanooga. The app integrates with Strava to track training activities, calculate points based on time spent in heart rate zones, and display competitive leaderboards.
 
-**Competition Period:** January 1 - March 31, 2026
-**Testing Period:** November 19 - December 31, 2025
+**Competition Period:** January 1 - May 3, 2026
+**Pre-Season:** November 16 - December 31, 2025
 **Tech Stack:** Next.js 15, TypeScript, Tailwind CSS, Supabase (PostgreSQL), Vercel
 
 ## Core Concept
@@ -16,6 +16,14 @@ Athletes earn points based on time spent in different heart rate zones during tr
 - **Zone 3** (70-80% max HR): 3 points/minute
 - **Zone 4** (80-90% max HR): 4 points/minute
 - **Zone 5** (90-100% max HR): 5 points/minute
+
+### Swim Scoring Exception
+
+**Swim activities use a special 4x time multiplier** instead of heart rate zone scoring:
+- **Formula:** Minutes Swum × 4 = Points
+- **Example:** 30-minute swim = 120 points
+
+This accounts for the difficulty of tracking accurate heart rate data in the water and was voted on by the group.
 
 All activity data, including custom heart rate zone boundaries, comes from Strava and is stored in Supabase for display and competition tracking.
 
@@ -568,8 +576,8 @@ npm run dev  # Runs on http://localhost:3000
 
 ### Current State
 - **Main branch:** Clean (no uncommitted changes)
-- **Testing period:** November 19 - December 31, 2025
-- **Competition period:** January 1 - March 31, 2026
+- **Pre-season:** November 16 - December 31, 2025
+- **Competition period:** January 1 - May 3, 2026
 
 ### Testing Data Reset
 

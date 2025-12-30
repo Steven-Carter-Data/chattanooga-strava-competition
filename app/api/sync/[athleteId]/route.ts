@@ -211,7 +211,13 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   // Classify bike activities based on elevation
   const classifiedSportType = classifyBikeActivity(activity);
 
-  // Insert activity
+  // Check if this is a swim activity - uses special 4x time multiplier scoring
+  const isSwim = classifiedSportType === 'Swim';
+
+  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4)
+  const swimPoints = isSwim ? ((activity.moving_time || 0) / 60) * 4 : 0;
+
+  // Insert activity (with zone_points pre-set for swim activities)
   const { data: newActivity, error: activityError } = await supabaseAdmin
     .from('activities')
     .insert({
@@ -224,6 +230,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       moving_time_s: activity.moving_time,
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
+      // For swim activities, set zone_points directly using 4x time multiplier
+      ...(isSwim && { zone_points: swimPoints }),
     })
     .select()
     .single();
@@ -232,7 +240,13 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     throw new Error(`Failed to insert activity: ${activityError?.message}`);
   }
 
-  // Fetch detailed activity data for HR streams
+  // For swim activities, we don't need HR zone data - points are calculated from time
+  if (isSwim) {
+    console.log(`Swim activity ${activity.id}: ${activity.moving_time / 60} min × 4 = ${swimPoints.toFixed(1)} points`);
+    return;
+  }
+
+  // Fetch detailed activity data for HR streams (non-swim activities only)
   const detailedResponse = await fetch(
     `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=heartrate,time&key_by_type=true`,
     {

@@ -310,6 +310,30 @@ function HomeContent() {
                   </p>
                 </div>
 
+                {/* Swim Scoring */}
+                <div className="bg-background border border-cyan-500/30 p-6">
+                  <h4 className="text-lg font-display text-cyan-400 mb-3 tracking-wider uppercase flex items-center gap-2">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.121 14.121L19 19m-7-7l7-7m-7 7l-2.879 2.879M12 12L9.121 9.121m0 5.758a3 3 0 10-4.243 4.243 3 3 0 004.243-4.243zm0-5.758a3 3 0 10-4.243-4.243 3 3 0 004.243 4.243z" />
+                    </svg>
+                    Swim Scoring
+                  </h4>
+                  <p className="text-muted text-sm font-body leading-relaxed mb-3">
+                    Swim activities use a special <span className="text-cyan-400 font-semibold">4x time multiplier</span> instead
+                    of heart rate zone scoring. This accounts for the difficulty of tracking accurate heart rate data in the water.
+                  </p>
+                  <div className="bg-background/50 border border-cyan-500/20 p-4 rounded">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted font-body">Formula:</span>
+                      <span className="font-display text-cyan-400">Minutes Swum × 4 = Points</span>
+                    </div>
+                    <div className="flex items-center justify-between text-sm mt-2">
+                      <span className="text-muted font-body">Example:</span>
+                      <span className="font-display text-foreground">30 min swim = <span className="text-cyan-400">120 pts</span></span>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Example Calculation */}
                 <div>
                   <h4 className="text-lg font-display text-gold mb-4 tracking-wider uppercase">
@@ -359,7 +383,7 @@ function HomeContent() {
                     Eligible Activities
                   </h4>
                   <p className="text-muted mb-4 font-body">
-                    All cardio activities with heart rate data count toward your score:
+                    All cardio activities count toward your score (HR zones for most, time-based for swim):
                   </p>
                   <div className="flex flex-wrap gap-3">
                     {['Run', 'Ride', 'Peloton/Trainer', 'Swim', 'Backcountry Ski', 'Elliptical', 'Rucking', 'Workout', 'Yoga'].map((activity) => (

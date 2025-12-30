@@ -169,6 +169,12 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   // Classify bike activities based on elevation
   const classifiedSportType = classifyBikeActivity(activity);
 
+  // Check if this is a swim activity - uses special 4x time multiplier scoring
+  const isSwim = classifiedSportType === 'Swim';
+
+  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4)
+  const swimPoints = isSwim ? ((activity.moving_time || 0) / 60) * 4 : 0;
+
   // Upsert activity
   const { data: activityRecord, error: activityError } = await supabaseAdmin
     .from('activities')
@@ -187,7 +193,8 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
         average_speed_mps: activity.average_speed,
         total_elevation_gain_m: activity.total_elevation_gain,
         raw_payload: activity,
-        zone_points: 0, // Will be updated by trigger
+        // For swim activities, set zone_points directly using 4x time multiplier
+        zone_points: isSwim ? swimPoints : 0, // Non-swim will be updated by trigger
       },
       { onConflict: 'strava_activity_id' }
     )
@@ -199,7 +206,13 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     return;
   }
 
-  // If we have HR data, calculate zones and upsert
+  // For swim activities, we don't need HR zone data - points are calculated from time
+  if (isSwim) {
+    console.log(`Swim activity ${activityId}: ${(activity.moving_time / 60).toFixed(1)} min × 4 = ${swimPoints.toFixed(1)} points`);
+    return;
+  }
+
+  // If we have HR data, calculate zones and upsert (non-swim activities only)
   if (hrStream && hrStream.length > 0 && activity.max_heartrate) {
     const zones = calculateHRZones(hrStream, activity.max_heartrate);
 
