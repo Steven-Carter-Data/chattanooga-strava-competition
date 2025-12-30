@@ -172,8 +172,8 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   // Check if this is a swim activity - uses special 4x time multiplier scoring
   const isSwim = classifiedSportType === 'Swim';
 
-  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4)
-  const swimPoints = isSwim ? ((activity.moving_time || 0) / 60) * 4 : 0;
+  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
+  const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
   // Upsert activity
   const { data: activityRecord, error: activityError } = await supabaseAdmin

@@ -214,8 +214,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   // Check if this is a swim activity - uses special 4x time multiplier scoring
   const isSwim = classifiedSportType === 'Swim';
 
-  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4)
-  const swimPoints = isSwim ? ((activity.moving_time || 0) / 60) * 4 : 0;
+  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
+  const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
   // Insert activity (with zone_points pre-set for swim activities)
   const { data: newActivity, error: activityError } = await supabaseAdmin
