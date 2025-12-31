@@ -116,6 +116,7 @@ function HomeContent() {
 
     let totalNewActivities = 0;
     let failedCount = 0;
+    const athleteSyncResults: { name: string; count: number }[] = [];
 
     for (const athlete of leaderboard) {
       try {
@@ -126,6 +127,12 @@ function HomeContent() {
 
         if (result.success) {
           totalNewActivities += result.synced;
+          if (result.synced > 0) {
+            athleteSyncResults.push({
+              name: `${athlete.firstname} ${athlete.lastname}`,
+              count: result.synced,
+            });
+          }
         } else {
           failedCount++;
         }
@@ -157,18 +164,31 @@ function HomeContent() {
 
     setSyncingAll(false);
 
+    // Build detailed sync message
     if (failedCount > 0) {
-      setSyncAllMessage(`Synced ${totalNewActivities} new activities (${failedCount} athlete${failedCount > 1 ? 's' : ''} failed)`);
+      const failedMsg = `(${failedCount} athlete${failedCount > 1 ? 's' : ''} failed)`;
+      if (athleteSyncResults.length > 0) {
+        const details = athleteSyncResults
+          .map(r => `${r.count} of ${r.name}'s`)
+          .join('. Synced ');
+        setSyncAllMessage(`Synced ${details}. ${failedMsg}`);
+      } else {
+        setSyncAllMessage(`No new activities synced. ${failedMsg}`);
+      }
     } else if (totalNewActivities === 0) {
-      setSyncAllMessage('Leaderboard and activities are up to date!');
+      setSyncAllMessage('All activities are up to date!');
     } else {
-      setSyncAllMessage(`Synced ${totalNewActivities} new ${totalNewActivities === 1 ? 'activity' : 'activities'}!`);
+      // Build message showing each athlete's synced activities
+      const details = athleteSyncResults
+        .map(r => `${r.count} of ${r.name}'s`)
+        .join('. Synced ');
+      setSyncAllMessage(`Synced ${details}.`);
     }
 
-    // Clear message after 5 seconds
+    // Clear message after 8 seconds (longer to read detailed message)
     setTimeout(() => {
       setSyncAllMessage(null);
-    }, 5000);
+    }, 8000);
   }
 
   return (
