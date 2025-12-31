@@ -21,6 +21,44 @@ function toRoman(num: number): string {
   return result;
 }
 
+// Helper function to get relative time string
+function getTimeAgo(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 1) return 'Just now';
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+// Helper function to get sport type icon/abbreviation
+function getSportIcon(sportType: string): string {
+  const icons: { [key: string]: string } = {
+    'Run': '🏃',
+    'Ride': '🚴',
+    'Peloton': '🚴',
+    'Swim': '🏊',
+    'Rowing': '🚣',
+    'WeightTraining': '🏋️',
+    'Workout': '💪',
+    'Yoga': '🧘',
+    'Hike': '🥾',
+    'Walk': '🚶',
+    'AlpineSki': '⛷️',
+    'BackcountrySki': '🎿',
+    'Elliptical': '🏃',
+    'TrailRun': '🏃',
+    'VirtualRide': '🚴',
+  };
+  return icons[sportType] || '🏅';
+}
+
 function HomeContent() {
   const searchParams = useSearchParams();
   const success = searchParams.get('success');
@@ -29,11 +67,13 @@ function HomeContent() {
 
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [weeklyStats, setWeeklyStats] = useState<any>(null);
+  const [recentActivities, setRecentActivities] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showScoringInfo, setShowScoringInfo] = useState(false);
   const [selectedWeeklyAthlete, setSelectedWeeklyAthlete] = useState<string | null>(null);
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncAllMessage, setSyncAllMessage] = useState<string | null>(null);
+  const [showAllActivities, setShowAllActivities] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -50,6 +90,13 @@ function HomeContent() {
         const weeklyData = await weeklyResponse.json();
         if (weeklyData.success) {
           setWeeklyStats(weeklyData.data);
+        }
+
+        // Fetch recent activities
+        const recentResponse = await fetch('/api/recent-activities');
+        const recentData = await recentResponse.json();
+        if (recentData.success) {
+          setRecentActivities(recentData.data);
         }
       } catch (err) {
         console.error('Failed to fetch data:', err);
@@ -99,6 +146,13 @@ function HomeContent() {
     const weeklyData = await weeklyResponse.json();
     if (weeklyData.success) {
       setWeeklyStats(weeklyData.data);
+    }
+
+    // Refresh recent activities
+    const recentResponse = await fetch('/api/recent-activities');
+    const recentData = await recentResponse.json();
+    if (recentData.success) {
+      setRecentActivities(recentData.data);
     }
 
     setSyncingAll(false);
@@ -742,6 +796,87 @@ function HomeContent() {
                 );
               })}
             </div>
+          </div>
+        )}
+
+        {/* Recent Activities Feed */}
+        {!loading && recentActivities.length > 0 && (
+          <div className="card p-4 sm:p-8 mt-8 sm:mt-10">
+            <div className="mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-display gradient-text tracking-wider uppercase">
+                    Recent Activities
+                  </h2>
+                  <div className="h-px w-20 sm:w-24 bg-gold/30 mt-2"></div>
+                </div>
+                <div className="text-xs text-muted font-body uppercase tracking-wider">
+                  Live Feed
+                </div>
+              </div>
+            </div>
+
+            {/* Activity List - Show first 10, then expand */}
+            <div className="space-y-2">
+              {recentActivities.slice(0, showAllActivities ? 20 : 10).map((activity, index) => {
+                const activityDate = new Date(activity.start_date);
+                const timeAgo = getTimeAgo(activityDate);
+
+                return (
+                  <div
+                    key={activity.id || index}
+                    className="flex items-center justify-between p-3 bg-background border border-gold/10 hover:border-gold/30 transition-all duration-300"
+                  >
+                    {/* Left side - Athlete & Activity */}
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      {/* Sport Type Icon */}
+                      <div className="w-8 h-8 flex items-center justify-center border border-gold/20 flex-shrink-0">
+                        <span className="text-xs font-display text-gold uppercase">
+                          {getSportIcon(activity.sport_type)}
+                        </span>
+                      </div>
+
+                      {/* Activity Details */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <Link
+                            href={`/athlete/${activity.athlete_id}`}
+                            className="font-body text-sm text-foreground hover:text-gold transition-colors truncate"
+                          >
+                            {activity.firstname} {activity.lastname}
+                          </Link>
+                          <span className="text-muted/50">•</span>
+                          <span className="text-xs text-muted font-body truncate">
+                            {activity.name}
+                          </span>
+                        </div>
+                        <div className="text-xs text-muted/60 font-body">
+                          {timeAgo}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right side - Points */}
+                    <div className="text-right flex-shrink-0 ml-4">
+                      <div className="text-lg font-display gradient-text">
+                        +{Math.round(activity.zone_points || 0)}
+                      </div>
+                      <div className="text-xs text-muted/60 font-body uppercase tracking-wider">pts</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Show More Button */}
+            {recentActivities.length > 10 && (
+              <button
+                onClick={() => setShowAllActivities(!showAllActivities)}
+                className="w-full mt-4 py-3 border border-gold/20 text-sm font-body text-muted hover:text-gold hover:border-gold/40 transition-all duration-300 uppercase tracking-wider"
+              >
+                {showAllActivities ? 'Show Less' : `Show More (${recentActivities.length - 10} more)`}
+              </button>
+            )}
           </div>
         )}
       </main>
