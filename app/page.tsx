@@ -128,50 +128,42 @@ function HomeContent() {
         <div className="absolute left-1/4 top-0 bottom-0 w-px bg-gold/10"></div>
         <div className="absolute right-1/4 top-0 bottom-0 w-px bg-gold/10"></div>
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20 relative z-10">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-8 sm:py-16 relative z-10">
           <div className="text-center">
-            {/* Badge */}
-            <div className="mb-6">
-              <span className="bourbon-badge">Est. 2019</span>
+            {/* Bourbon Chasers Logo */}
+            <div className="mb-6 sm:mb-8 flex justify-center">
+              <img
+                src="/images/bc_logo.png"
+                alt="Bourbon Chasers"
+                className="w-48 h-48 sm:w-64 sm:h-64 md:w-80 md:h-80 lg:w-96 lg:h-96 object-contain drop-shadow-2xl"
+              />
             </div>
 
-            {/* Main Title - Art Deco Typography */}
-            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-8xl font-display mb-6 tracking-widest uppercase text-foreground">
-              Bourbon Chasers
+            {/* Subtitle */}
+            <h1 className="text-xl sm:text-2xl md:text-4xl font-display mb-4 sm:mb-6 tracking-wider uppercase gradient-text">
+              Strava Training Championship
             </h1>
 
-            {/* Decorative divider */}
-            <div className="flex items-center justify-center gap-4 mb-8">
-              <div className="h-px w-16 md:w-24 bg-gold/50"></div>
-              <div className="w-3 h-3 border border-gold rotate-45"></div>
-              <div className="h-px w-16 md:w-24 bg-gold/50"></div>
-            </div>
-
-            {/* Logo in double frame */}
-            <div className="mb-8 flex justify-center">
+            {/* Ironman Logo - smaller, below subtitle */}
+            <div className="mb-4 sm:mb-6 flex justify-center">
               <div className="double-frame inline-block">
                 <div className="double-frame-inner">
                   <img
                     src="/images/ironman_chattanooga_logo_2.png"
                     alt="Ironman 70.3 Chattanooga"
-                    className="h-20 md:h-28 w-auto"
+                    className="h-14 sm:h-16 md:h-20 w-auto"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Subtitle */}
-            <h2 className="text-xl sm:text-2xl md:text-4xl font-display mb-6 tracking-wider uppercase gradient-text">
-              Strava Training Championship
-            </h2>
-
             {/* Competition dates */}
-            <p className="text-lg md:text-xl font-body font-semibold mb-3 text-gold tracking-wider uppercase">
+            <p className="text-base sm:text-lg md:text-xl font-body font-semibold mb-2 sm:mb-3 text-gold tracking-wider uppercase">
               January 1st - May 3rd, 2026
             </p>
 
             {/* Tagline */}
-            <p className="mt-6 text-base md:text-lg max-w-xl mx-auto text-muted font-body tracking-wide">
+            <p className="mt-4 sm:mt-6 text-sm sm:text-base md:text-lg max-w-xl mx-auto text-muted font-body tracking-wide">
               Train hard, chase bourbon.
             </p>
           </div>
