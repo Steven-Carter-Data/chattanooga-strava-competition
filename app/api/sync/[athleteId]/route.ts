@@ -119,11 +119,17 @@ export async function POST(
     let errorCount = 0;
     let skippedCount = 0;
 
+    console.log(`Processing ${activities.length} activities from Strava`);
+    console.log(`Competition window: ${competitionStartDate.toISOString()} to ${competitionEndDate.toISOString()}`);
+
     // Process each activity
     for (const activity of activities) {
       try {
-        // Filter out excluded activity types (e.g., Walk)
+        // Log activity details for debugging
         const activityType = activity.sport_type || activity.type;
+        console.log(`Processing activity: ${activity.id} - ${activity.name} (${activityType}) on ${activity.start_date}`);
+
+        // Filter out excluded activity types (e.g., Walk)
         if (EXCLUDED_ACTIVITY_TYPES.includes(activityType)) {
           console.log(`Skipping activity ${activity.id} - excluded type: ${activityType}`);
           skippedCount++;
@@ -133,7 +139,7 @@ export async function POST(
         // Filter activities by competition date range
         const activityDate = new Date(activity.start_date);
         if (activityDate < competitionStartDate || activityDate > competitionEndDate) {
-          console.log(`Skipping activity ${activity.id} - outside competition dates`);
+          console.log(`Skipping activity ${activity.id} - outside competition dates (activity: ${activityDate.toISOString()})`);
           skippedCount++;
           continue;
         }
@@ -147,10 +153,12 @@ export async function POST(
 
         if (existingActivity) {
           // Activity already exists, skip it (no need to re-sync)
+          console.log(`Activity ${activity.id} already exists in database, skipping`);
           existingCount++;
           continue;
         } else {
           // New activity, insert it
+          console.log(`Inserting new activity: ${activity.id} - ${activity.name}`);
           await insertActivity(activity, athlete.id, accessToken, athleteZones);
           newCount++;
         }
@@ -187,12 +195,23 @@ export async function POST(
 function classifyBikeActivity(activity: any): string {
   const sportType = activity.sport_type || activity.type;
 
-  // List of bike-related activity types from Strava
-  const bikeTypes = ['Ride', 'VirtualRide', 'EBikeRide', 'Velomobile', 'Handcycle'];
+  // List of ALL bike-related activity types from Strava API
+  // Includes: Ride, VirtualRide, EBikeRide, EMountainBikeRide, GravelRide, MountainBikeRide, Velomobile, Handcycle
+  const bikeTypes = [
+    'Ride',
+    'VirtualRide',
+    'EBikeRide',
+    'EMountainBikeRide',
+    'GravelRide',
+    'MountainBikeRide',
+    'Velomobile',
+    'Handcycle',
+  ];
 
   // Check if this is a bike-related activity
   if (bikeTypes.includes(sportType)) {
     const elevation = activity.total_elevation_gain || 0;
+    console.log(`Bike activity classification: ${sportType} with ${elevation}m elevation`);
 
     // If there's any elevation gain, it's an outdoor ride
     if (elevation > 0) {

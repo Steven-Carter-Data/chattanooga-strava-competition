@@ -79,12 +79,23 @@ export async function POST(request: NextRequest) {
 function classifyBikeActivity(activity: any): string {
   const sportType = activity.sport_type || activity.type;
 
-  // List of bike-related activity types from Strava
-  const bikeTypes = ['Ride', 'VirtualRide', 'EBikeRide', 'Velomobile', 'Handcycle'];
+  // List of ALL bike-related activity types from Strava API
+  // Includes: Ride, VirtualRide, EBikeRide, EMountainBikeRide, GravelRide, MountainBikeRide, Velomobile, Handcycle
+  const bikeTypes = [
+    'Ride',
+    'VirtualRide',
+    'EBikeRide',
+    'EMountainBikeRide',
+    'GravelRide',
+    'MountainBikeRide',
+    'Velomobile',
+    'Handcycle',
+  ];
 
   // Check if this is a bike-related activity
   if (bikeTypes.includes(sportType)) {
     const elevation = activity.total_elevation_gain || 0;
+    console.log(`Bike activity classification: ${sportType} with ${elevation}m elevation`);
 
     // If there's any elevation gain, it's an outdoor ride
     if (elevation > 0) {
