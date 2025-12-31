@@ -237,6 +237,9 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
   // Insert activity (with zone_points pre-set for swim activities)
+  // Note: in_competition_window is set explicitly to true since the sync endpoint
+  // already filters activities to only those within the competition date range.
+  // This prevents issues with the database trigger inconsistently setting this flag.
   const { data: newActivity, error: activityError } = await supabaseAdmin
     .from('activities')
     .insert({
@@ -249,6 +252,7 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       moving_time_s: activity.moving_time,
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
+      in_competition_window: true, // Explicitly set - activity already filtered by date range
       // For swim activities, set zone_points directly using 4x time multiplier
       ...(isSwim && { zone_points: swimPoints }),
     })

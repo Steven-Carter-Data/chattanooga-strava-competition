@@ -378,7 +378,7 @@ function HomeContent() {
                     All cardio activities count toward your score (HR zones for most, time-based for swim):
                   </p>
                   <div className="flex flex-wrap gap-3">
-                    {['Run', 'Ride', 'Peloton/Trainer', 'Swim', 'Backcountry Ski', 'Elliptical', 'Rucking', 'Workout', 'Yoga'].map((activity) => (
+                    {['Run', 'Ride', 'Peloton/Trainer', 'Swim', 'Rowing', 'Backcountry Ski', 'Elliptical', 'Rucking', 'Workout', 'Yoga'].map((activity) => (
                       <span
                         key={activity}
                         className="px-4 py-2 bg-background border border-gold/30 text-foreground font-body text-sm uppercase tracking-wider hover:border-gold/60 transition-colors duration-300"

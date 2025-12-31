@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase';
+import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import {
   fetchStravaActivity,
   fetchHeartRateStream,
@@ -186,6 +186,17 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
   const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
+  // Check if activity is within competition window
+  // This is set explicitly to prevent issues with database trigger inconsistently setting this flag
+  let inCompetitionWindow = false;
+  const { data: config } = await getActiveCompetitionConfig(supabaseAdmin);
+  if (config) {
+    const activityDate = new Date(activity.start_date);
+    const startDate = new Date(config.start_date);
+    const endDate = new Date(config.end_date);
+    inCompetitionWindow = activityDate >= startDate && activityDate <= endDate;
+  }
+
   // Upsert activity
   const { data: activityRecord, error: activityError } = await supabaseAdmin
     .from('activities')
@@ -204,6 +215,7 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
         average_speed_mps: activity.average_speed,
         total_elevation_gain_m: activity.total_elevation_gain,
         raw_payload: activity,
+        in_competition_window: inCompetitionWindow, // Explicitly set based on competition config
         // For swim activities, set zone_points directly using 4x time multiplier
         zone_points: isSwim ? swimPoints : 0, // Non-swim will be updated by trigger
       },
