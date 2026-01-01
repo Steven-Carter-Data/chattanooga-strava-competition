@@ -229,13 +229,14 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     return;
   }
 
-  // For swim activities, we don't need HR zone data - points are calculated from time
+  // Log swim activity points (calculated from time, not HR zones)
   if (isSwim) {
-    console.log(`Swim activity ${activityId}: ${(activity.moving_time / 60).toFixed(1)} min × 4 = ${swimPoints.toFixed(1)} points`);
-    return;
+    console.log(`Swim activity ${activityId}: ${(activity.moving_time / 60).toFixed(1)} min × 4 = ${swimPoints} points`);
+    // Continue to store HR zone data for display purposes (if available)
   }
 
-  // If we have HR data, calculate zones and upsert (non-swim activities only)
+  // If we have HR data, calculate zones and upsert
+  // This is done for ALL activities (including swim) so HR zone data can be displayed
   if (hrStream && hrStream.length > 0 && activity.max_heartrate) {
     const zones = calculateHRZones(hrStream, activity.max_heartrate);
 

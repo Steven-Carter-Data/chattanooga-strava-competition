@@ -263,13 +263,14 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     throw new Error(`Failed to insert activity: ${activityError?.message}`);
   }
 
-  // For swim activities, we don't need HR zone data - points are calculated from time
+  // Log swim activity points (calculated from time, not HR zones)
   if (isSwim) {
-    console.log(`Swim activity ${activity.id}: ${activity.moving_time / 60} min × 4 = ${swimPoints.toFixed(1)} points`);
-    return;
+    console.log(`Swim activity ${activity.id}: ${activity.moving_time / 60} min × 4 = ${swimPoints} points`);
+    // Continue to fetch HR zone data for display purposes (if available)
   }
 
-  // Fetch detailed activity data for HR streams (non-swim activities only)
+  // Fetch detailed activity data for HR streams
+  // This is fetched for ALL activities (including swim) so HR zone data can be displayed
   const detailedResponse = await fetch(
     `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=heartrate,time&key_by_type=true`,
     {
@@ -301,7 +302,7 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
         return;
       }
 
-      // Insert HR zones
+      // Insert HR zones (for display purposes - swim points are NOT recalculated from this)
       await supabaseAdmin
         .from('heart_rate_zones')
         .insert({
@@ -312,7 +313,11 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
           zone_4_time_s: zones.zone_4,
           zone_5_time_s: zones.zone_5,
         });
+    } else if (isSwim) {
+      console.log(`Swim activity ${activity.id}: No HR data available from Strava`);
     }
+  } else if (isSwim) {
+    console.log(`Swim activity ${activity.id}: Could not fetch HR streams from Strava`);
   }
 }
 
