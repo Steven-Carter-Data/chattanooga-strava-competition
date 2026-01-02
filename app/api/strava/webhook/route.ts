@@ -11,7 +11,7 @@ import { StravaWebhookEvent } from '@/lib/types';
 
 // Activity types excluded from the competition
 // These activities will not be synced or count toward points
-const EXCLUDED_ACTIVITY_TYPES = ['Walk'];
+const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki'];
 
 /**
  * GET handler for Strava webhook verification

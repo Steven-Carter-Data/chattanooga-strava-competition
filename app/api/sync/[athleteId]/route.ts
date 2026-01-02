@@ -5,7 +5,7 @@ import { fetchAthleteZones, calculateHRZonesWithCustomBoundaries } from '@/lib/s
 
 // Activity types excluded from the competition
 // These activities will not be synced or count toward points
-const EXCLUDED_ACTIVITY_TYPES = ['Walk'];
+const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki'];
 
 /**
  * POST /api/sync/[athleteId]
