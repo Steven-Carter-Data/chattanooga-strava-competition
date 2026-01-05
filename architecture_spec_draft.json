@@ -1,9 +1,9 @@
 {
   "app_name": "Ironman 70.3 Training Championship",
-  "purpose": "Gamified HR-zone-based Strava competition for Ironman 70.3 training (Jan 1, 2026 – Mar 31, 2026).",
+  "purpose": "Gamified HR-zone-based Strava competition for Ironman 70.3 training (Jan 1, 2026 – May 3, 2026).",
   "competition_window": {
     "start_utc": "2026-01-01T00:00:00Z",
-    "end_utc": "2026-03-31T23:59:59Z"
+    "end_utc": "2026-05-03T23:59:59Z"
   },
   "tech_stack": {
     "frontend": {
@@ -139,7 +139,7 @@
         "initial_row": {
           "name": "Ironman 70.3 Training Championship 2026",
           "start_date": "2026-01-01T00:00:00Z",
-          "end_date": "2026-03-31T23:59:59Z",
+          "end_date": "2026-05-03T23:59:59Z",
           "is_active": true
         }
       }

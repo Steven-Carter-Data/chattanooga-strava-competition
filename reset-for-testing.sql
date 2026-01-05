@@ -7,11 +7,11 @@ DELETE FROM heart_rate_zones;
 -- 2. Delete all activities
 DELETE FROM activities;
 
--- 3. Update competition config to testing period (today through Dec 31, 2025)
+-- 3. Update competition config to competition period (Jan 1 - May 3, 2026)
 UPDATE competition_config
 SET
-  start_date = '2025-11-19',
-  end_date = '2025-12-31'
+  start_date = '2026-01-01',
+  end_date = '2026-05-03'
 WHERE id = (SELECT id FROM competition_config LIMIT 1);
 
 -- Verify the changes

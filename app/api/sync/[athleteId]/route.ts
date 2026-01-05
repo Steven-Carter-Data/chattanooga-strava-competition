@@ -236,7 +236,13 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
   const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
-  // Insert activity (with zone_points pre-set for swim activities)
+  // Calculate Zone 1 fallback points (1 point per minute) for activities without HR data
+  const zone1FallbackPoints = (activity.moving_time || 0) / 60;
+
+  // Determine if activity has HR data (will be used to decide final points)
+  const hasHRData = activity.average_heartrate != null || activity.max_heartrate != null;
+
+  // Insert activity (with zone_points pre-set for swim activities or Zone 1 fallback for no HR data)
   // Note: in_competition_window is set explicitly to true since the sync endpoint
   // already filters activities to only those within the competition date range.
   // This prevents issues with the database trigger inconsistently setting this flag.
@@ -253,8 +259,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
       in_competition_window: true, // Explicitly set - activity already filtered by date range
-      // For swim activities, set zone_points directly using 4x time multiplier
-      ...(isSwim && { zone_points: swimPoints }),
+      // For swim: 4x time multiplier; For no HR data: Zone 1 (1 pt/min); Others: will be set by trigger
+      ...(isSwim ? { zone_points: swimPoints } : !hasHRData ? { zone_points: zone1FallbackPoints } : {}),
     })
     .select()
     .single();
@@ -267,6 +273,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   if (isSwim) {
     console.log(`Swim activity ${activity.id}: ${activity.moving_time / 60} min × 4 = ${swimPoints} points`);
     // Continue to fetch HR zone data for display purposes (if available)
+  } else if (!hasHRData) {
+    console.log(`Activity ${activity.id} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${activity.moving_time / 60} min × 1)`);
   }
 
   // Fetch detailed activity data for HR streams

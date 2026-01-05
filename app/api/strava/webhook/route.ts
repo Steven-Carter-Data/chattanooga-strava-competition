@@ -186,6 +186,12 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
   const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
 
+  // Calculate Zone 1 fallback points (1 point per minute) for activities without HR data
+  const zone1FallbackPoints = (activity.moving_time || 0) / 60;
+
+  // Determine if activity has HR data (will be used to decide final points)
+  const hasHRData = activity.average_heartrate != null || activity.max_heartrate != null;
+
   // Check if activity is within competition window
   // This is set explicitly to prevent issues with database trigger inconsistently setting this flag
   let inCompetitionWindow = false;
@@ -195,6 +201,15 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     const startDate = new Date(config.start_date);
     const endDate = new Date(config.end_date);
     inCompetitionWindow = activityDate >= startDate && activityDate <= endDate;
+  }
+
+  // Determine zone_points based on activity type and HR data availability
+  // Priority: 1) Swim uses 4x time multiplier, 2) No HR data uses Zone 1 (1 pt/min), 3) Others use HR zone trigger
+  let zonePoints = 0;
+  if (isSwim) {
+    zonePoints = swimPoints;
+  } else if (!hasHRData) {
+    zonePoints = zone1FallbackPoints;
   }
 
   // Upsert activity
@@ -216,8 +231,8 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
         total_elevation_gain_m: activity.total_elevation_gain,
         raw_payload: activity,
         in_competition_window: inCompetitionWindow, // Explicitly set based on competition config
-        // For swim activities, set zone_points directly using 4x time multiplier
-        zone_points: isSwim ? swimPoints : 0, // Non-swim will be updated by trigger
+        // For swim: 4x time multiplier; For no HR data: Zone 1 (1 pt/min); Others: will be set by trigger
+        zone_points: zonePoints,
       },
       { onConflict: 'strava_activity_id' }
     )
@@ -233,6 +248,8 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   if (isSwim) {
     console.log(`Swim activity ${activityId}: ${(activity.moving_time / 60).toFixed(1)} min × 4 = ${swimPoints} points`);
     // Continue to store HR zone data for display purposes (if available)
+  } else if (!hasHRData) {
+    console.log(`Activity ${activityId} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${(activity.moving_time / 60).toFixed(1)} min × 1)`);
   }
 
   // If we have HR data, calculate zones and upsert

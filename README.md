@@ -1,6 +1,6 @@
 # Ironman 70.3 Training Championship
 
-Gamified HR-zone-based Strava competition for Ironman 70.3 training (January 1 - March 31, 2026).
+Gamified HR-zone-based Strava competition for Ironman 70.3 training (January 1 - May 3, 2026).
 
 ## Tech Stack
 

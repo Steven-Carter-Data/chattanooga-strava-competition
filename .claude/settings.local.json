@@ -24,7 +24,13 @@
       "Bash(node check-token.js:*)",
       "Bash(node debug-zones.js:*)",
       "Bash(node analyze-zone-issue.js:*)",
-      "Bash(node verify-zone-display.js:*)"
+      "Bash(node verify-zone-display.js:*)",
+      "Bash(if not exist \"c:\\Users\\sdcar\\OneDrive\\Documents\\2_Dev_Apps\\70.3_Chattanooga_Strava_BC_Comp\\components\" mkdir \"c:\\Users\\sdcar\\OneDrive\\Documents\\2_Dev_Apps\\70.3_Chattanooga_Strava_BC_Comp\\components\")",
+      "Bash(tasklist /FI 'IMAGENAME eq node.exe')",
+      "Bash(findstr:*)",
+      "Bash(git fetch:*)",
+      "Bash(git cherry-pick:*)",
+      "Bash(git diff:*)"
     ],
     "deny": [],
     "ask": []

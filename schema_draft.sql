@@ -36,7 +36,7 @@ insert into public.competition_config (name, start_date, end_date, is_active)
 values (
   'Ironman 70.3 Training Championship 2026',
   '2026-01-01T00:00:00Z',
-  '2026-03-31T23:59:59Z',
+  '2026-05-03T23:59:59Z',
   true
 )
 on conflict do nothing;
