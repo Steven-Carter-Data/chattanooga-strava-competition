@@ -98,6 +98,8 @@ export default function AthletePage() {
   const [syncMessage, setSyncMessage] = useState<string | null>(null);
   const [recentActivitiesExpanded, setRecentActivitiesExpanded] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [togglingPaceExclusion, setTogglingPaceExclusion] = useState<string | null>(null);
+  const [paceExclusions, setPaceExclusions] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     async function fetchAthleteData() {
@@ -109,6 +111,12 @@ export default function AthletePage() {
         const result = await response.json();
         if (result.success) {
           setData(result.data);
+          // Initialize pace exclusions from activity data
+          const exclusions: Record<string, boolean> = {};
+          result.data.recent_activities?.forEach((activity: any) => {
+            exclusions[activity.id] = activity.exclude_from_pace_analysis || false;
+          });
+          setPaceExclusions(exclusions);
         } else {
           setError('Athlete not found');
         }
@@ -215,6 +223,29 @@ export default function AthletePage() {
       console.error('Export failed:', err);
     } finally {
       setExporting(false);
+    }
+  }
+
+  async function handleTogglePaceExclusion(activityId: string) {
+    setTogglingPaceExclusion(activityId);
+    try {
+      const response = await fetch(`/api/activity/${activityId}/toggle-pace-exclusion`, {
+        method: 'POST',
+      });
+      const result = await response.json();
+      if (result.success) {
+        // Update local state
+        setPaceExclusions((prev) => ({
+          ...prev,
+          [activityId]: result.exclude_from_pace_analysis,
+        }));
+      } else {
+        console.error('Failed to toggle pace exclusion:', result.error);
+      }
+    } catch (err) {
+      console.error('Failed to toggle pace exclusion:', err);
+    } finally {
+      setTogglingPaceExclusion(null);
     }
   }
 
@@ -684,6 +715,33 @@ export default function AthletePage() {
                         </div>
                       </div>
                     )}
+
+                    {/* Pace Analysis Exclusion Toggle */}
+                    <div className="mt-3 pt-3 border-t border-gold/10 flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer group">
+                        <input
+                          type="checkbox"
+                          checked={paceExclusions[activity.id] || false}
+                          onChange={() => handleTogglePaceExclusion(activity.id)}
+                          disabled={togglingPaceExclusion === activity.id}
+                          className="w-4 h-4 border-2 border-gold/30 bg-background checked:bg-gold checked:border-gold focus:ring-gold/50 focus:ring-2 cursor-pointer transition-colors"
+                        />
+                        <span className="text-xs text-muted font-body uppercase tracking-wider group-hover:text-gold transition-colors">
+                          Exclude from Pace Analysis
+                        </span>
+                        {togglingPaceExclusion === activity.id && (
+                          <svg className="animate-spin h-3 w-3 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                        )}
+                      </label>
+                      {paceExclusions[activity.id] && (
+                        <span className="text-xs text-gold/70 font-body italic">
+                          Not included in pace trends
+                        </span>
+                      )}
+                    </div>
                   </div>
                 );
               })}

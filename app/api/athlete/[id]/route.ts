@@ -27,9 +27,33 @@ export async function GET(
     }
 
     // Get all activities with HR zones for this athlete in the competition window
+    // Query activities table directly to get exclude_from_pace_analysis flag
     const { data: activities, error: activitiesError } = await supabase
-      .from('activity_detail')
-      .select('*')
+      .from('activities')
+      .select(`
+        id,
+        strava_activity_id,
+        athlete_id,
+        name,
+        sport_type,
+        start_date,
+        distance_m,
+        moving_time_s,
+        average_heartrate,
+        max_heartrate,
+        average_speed_mps,
+        total_elevation_gain_m,
+        zone_points,
+        in_competition_window,
+        exclude_from_pace_analysis,
+        heart_rate_zones (
+          zone_1_time_s,
+          zone_2_time_s,
+          zone_3_time_s,
+          zone_4_time_s,
+          zone_5_time_s
+        )
+      `)
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
       .order('start_date', { ascending: false });
@@ -83,12 +107,36 @@ export async function GET(
     };
 
     activities?.forEach((activity) => {
-      totalZoneTime.zone_1 += activity.zone_1_time_s || 0;
-      totalZoneTime.zone_2 += activity.zone_2_time_s || 0;
-      totalZoneTime.zone_3 += activity.zone_3_time_s || 0;
-      totalZoneTime.zone_4 += activity.zone_4_time_s || 0;
-      totalZoneTime.zone_5 += activity.zone_5_time_s || 0;
+      // Handle nested heart_rate_zones data (can be array or single object)
+      const hrZones = Array.isArray(activity.heart_rate_zones)
+        ? activity.heart_rate_zones[0]
+        : activity.heart_rate_zones;
+
+      if (hrZones) {
+        totalZoneTime.zone_1 += hrZones.zone_1_time_s || 0;
+        totalZoneTime.zone_2 += hrZones.zone_2_time_s || 0;
+        totalZoneTime.zone_3 += hrZones.zone_3_time_s || 0;
+        totalZoneTime.zone_4 += hrZones.zone_4_time_s || 0;
+        totalZoneTime.zone_5 += hrZones.zone_5_time_s || 0;
+      }
     });
+
+    // Flatten activities for response (merge hr zones into activity object)
+    const flattenedActivities = activities?.map((activity) => {
+      const hrZones = Array.isArray(activity.heart_rate_zones)
+        ? activity.heart_rate_zones[0]
+        : activity.heart_rate_zones;
+
+      return {
+        ...activity,
+        zone_1_time_s: hrZones?.zone_1_time_s || 0,
+        zone_2_time_s: hrZones?.zone_2_time_s || 0,
+        zone_3_time_s: hrZones?.zone_3_time_s || 0,
+        zone_4_time_s: hrZones?.zone_4_time_s || 0,
+        zone_5_time_s: hrZones?.zone_5_time_s || 0,
+        heart_rate_zones: undefined, // Remove nested object
+      };
+    }) || [];
 
     return NextResponse.json({
       success: true,
@@ -107,7 +155,7 @@ export async function GET(
         sport_breakdown: sportStats,
         weekly_stats: weeklyStats,
         zone_distribution: totalZoneTime,
-        recent_activities: activities?.slice(0, 10) || [], // Most recent 10
+        recent_activities: flattenedActivities.slice(0, 10), // Most recent 10
       },
     });
   } catch (error) {
