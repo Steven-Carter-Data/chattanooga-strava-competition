@@ -2,11 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import {
   fetchStravaActivity,
-  fetchHeartRateStream,
-  calculateHRZones,
-  calculateZonePoints,
   getAthleteAccessToken,
 } from '@/lib/strava';
+import { fetchAthleteZones, calculateHRZonesWithCustomBoundaries } from '@/lib/strava-zones';
 import { StravaWebhookEvent } from '@/lib/types';
 
 // Activity types excluded from the competition
@@ -142,8 +140,13 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     return;
   }
 
-  // Fetch heart rate stream
-  const hrStream = await fetchHeartRateStream(activityId, accessToken);
+  // Fetch athlete's HR zone configuration from Strava (for accurate zone calculation)
+  const athleteZones = await fetchAthleteZones(accessToken);
+  if (!athleteZones || !athleteZones.heart_rate || !athleteZones.heart_rate.zones) {
+    console.warn(`Could not fetch athlete HR zones from Strava for athlete ${athleteId}`);
+  } else {
+    console.log(`Athlete ${athleteId} HR zones:`, athleteZones.heart_rate.custom_zones ? 'Custom' : 'Auto');
+  }
 
   // Ensure athlete exists in database
   const { data: existingAthlete } = await supabaseAdmin
@@ -252,29 +255,106 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     console.log(`Activity ${activityId} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${(activity.moving_time / 60).toFixed(1)} min × 1)`);
   }
 
-  // If we have HR data, calculate zones and upsert
+  // Fetch HR and time streams for zone calculation
   // This is done for ALL activities (including swim) so HR zone data can be displayed
-  if (hrStream && hrStream.length > 0 && activity.max_heartrate) {
-    const zones = calculateHRZones(hrStream, activity.max_heartrate);
+  const streamsResponse = await fetch(
+    `https://www.strava.com/api/v3/activities/${activityId}/streams?keys=heartrate,time&key_by_type=true`,
+    {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    }
+  );
 
-    const { error: zonesError } = await supabaseAdmin
-      .from('heart_rate_zones')
-      .upsert(
-        {
-          activity_id: activityRecord.id,
-          ...zones,
-        },
-        { onConflict: 'activity_id' }
-      );
+  if (streamsResponse.ok) {
+    const streams = await streamsResponse.json();
 
-    if (zonesError) {
-      console.error('Failed to upsert HR zones:', zonesError);
+    if (streams.heartrate && streams.time) {
+      const hrData = streams.heartrate.data;
+      const timeData = streams.time.data;
+
+      let zones;
+      if (athleteZones?.heart_rate?.zones) {
+        // Use athlete's custom HR zone boundaries from Strava (matches Strava exactly)
+        zones = calculateHRZonesWithCustomBoundaries(hrData, timeData, athleteZones.heart_rate.zones);
+        console.log(`Calculated zones for activity ${activityId} using custom boundaries`);
+      } else if (activity.max_heartrate) {
+        // Fallback to simple calculation if no custom zones available
+        zones = calculateSimpleZones(hrData, timeData, activity.max_heartrate);
+        console.log(`Calculated zones for activity ${activityId} using max HR fallback`);
+      } else {
+        console.warn(`Skipping HR zones for activity ${activityId} - no zone config or max HR`);
+        return;
+      }
+
+      const { error: zonesError } = await supabaseAdmin
+        .from('heart_rate_zones')
+        .upsert(
+          {
+            activity_id: activityRecord.id,
+            zone_1_time_s: zones.zone_1,
+            zone_2_time_s: zones.zone_2,
+            zone_3_time_s: zones.zone_3,
+            zone_4_time_s: zones.zone_4,
+            zone_5_time_s: zones.zone_5,
+          },
+          { onConflict: 'activity_id' }
+        );
+
+      if (zonesError) {
+        console.error('Failed to upsert HR zones:', zonesError);
+      } else {
+        console.log(`Successfully processed activity ${activityId} with HR zones`);
+      }
     } else {
-      console.log(`Successfully processed activity ${activityId} with HR zones`);
+      console.log(`Activity ${activityId} has no HR stream data`);
     }
   } else {
-    console.log(`Activity ${activityId} has no HR data`);
+    console.log(`Failed to fetch streams for activity ${activityId}: ${streamsResponse.statusText}`);
   }
+}
+
+/**
+ * Calculate zones using max HR percentage (fallback method)
+ */
+function calculateSimpleZones(
+  hrData: number[],
+  timeData: number[],
+  maxHR: number
+): {
+  zone_1: number;
+  zone_2: number;
+  zone_3: number;
+  zone_4: number;
+  zone_5: number;
+} {
+  const zones = {
+    zone_1: 0,
+    zone_2: 0,
+    zone_3: 0,
+    zone_4: 0,
+    zone_5: 0,
+  };
+
+  for (let i = 0; i < hrData.length - 1; i++) {
+    const hr = hrData[i];
+    const duration = timeData[i + 1] - timeData[i]; // seconds between readings
+    const hrPercent = (hr / maxHR) * 100;
+
+    if (hrPercent < 60) {
+      zones.zone_1 += duration;
+    } else if (hrPercent < 70) {
+      zones.zone_2 += duration;
+    } else if (hrPercent < 80) {
+      zones.zone_3 += duration;
+    } else if (hrPercent < 90) {
+      zones.zone_4 += duration;
+    } else {
+      zones.zone_5 += duration;
+    }
+  }
+
+  return zones;
 }
 
 /**
