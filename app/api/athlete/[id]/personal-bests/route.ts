@@ -36,7 +36,6 @@ export async function GET(
         )
       `)
       .eq('athlete_id', athleteId)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false });
 
     if (activitiesError) {
@@ -47,7 +46,10 @@ export async function GET(
       );
     }
 
-    if (!activities || activities.length === 0) {
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter((a: any) => a.hidden !== true);
+
+    if (!filteredActivities || filteredActivities.length === 0) {
       return NextResponse.json({
         success: true,
         data: {
@@ -58,16 +60,16 @@ export async function GET(
     }
 
     // Calculate personal bests
-    const personalBests = calculatePersonalBests(activities);
+    const personalBests = calculatePersonalBests(filteredActivities);
 
     // Calculate weekly stats for "best week ever"
-    const weeklyStats = calculateWeeklyStats(activities);
+    const weeklyStats = calculateWeeklyStats(filteredActivities);
 
     // Calculate streaks
-    const streaks = calculateStreaks(activities);
+    const streaks = calculateStreaks(filteredActivities);
 
     // Calculate milestones
-    const milestones = calculateMilestones(activities);
+    const milestones = calculateMilestones(filteredActivities);
 
     return NextResponse.json({
       success: true,
@@ -77,7 +79,7 @@ export async function GET(
         weeklyStats,
         streaks,
         milestones,
-        totalActivities: activities.length,
+        totalActivities: filteredActivities.length,
       },
     });
   } catch (error) {

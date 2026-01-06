@@ -38,9 +38,8 @@ export async function GET() {
         )
       `)
       .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false })
-      .limit(20);
+      .limit(50);  // Fetch more since we filter in code
 
     if (error) {
       console.error('Error fetching recent activities:', error);
@@ -50,8 +49,11 @@ export async function GET() {
       );
     }
 
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const visibleActivities = (activities || []).filter((a: any) => a.hidden !== true).slice(0, 20);
+
     // Flatten the response to match the old activity_detail view format
-    const flattenedActivities = (activities || []).map((activity: any) => {
+    const flattenedActivities = visibleActivities.map((activity: any) => {
       const athlete = activity.athletes;
       const hrZones = Array.isArray(activity.heart_rate_zones)
         ? activity.heart_rate_zones[0]

@@ -30,6 +30,7 @@ export async function GET() {
         zone_points,
         distance_m,
         moving_time_s,
+        hidden,
         athletes (
           firstname,
           lastname,
@@ -37,24 +38,25 @@ export async function GET() {
         )
       `)
       .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false')
       .gte('start_date', weekStart.toISOString())
       .lt('start_date', weekEnd.toISOString())
       .order('start_date', { ascending: false });
 
-    // Flatten the response to match previous format
-    const activities = rawActivities?.map((activity) => {
-      const athlete = Array.isArray(activity.athletes)
-        ? activity.athletes[0]
-        : activity.athletes;
-      return {
-        ...activity,
-        firstname: athlete?.firstname || '',
-        lastname: athlete?.lastname || '',
-        profile_image_url: athlete?.profile_image_url || null,
-        athletes: undefined,
-      };
-    });
+    // Filter and flatten the response
+    const activities = (rawActivities || [])
+      .filter((a: any) => a.hidden !== true)  // Filter hidden in code
+      .map((activity) => {
+        const athlete = Array.isArray(activity.athletes)
+          ? activity.athletes[0]
+          : activity.athletes;
+        return {
+          ...activity,
+          firstname: athlete?.firstname || '',
+          lastname: athlete?.lastname || '',
+          profile_image_url: athlete?.profile_image_url || null,
+          athletes: undefined,
+        };
+      });
 
     if (activitiesError) {
       console.error('Error fetching weekly activities:', activitiesError);

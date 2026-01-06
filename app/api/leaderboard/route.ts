@@ -22,13 +22,33 @@ export async function GET() {
       );
     }
 
-    // Get all activities in competition window that are not hidden
-    // Use explicit filter for hidden to handle NULL values (treat NULL as not hidden)
-    const { data: activities, error: activitiesError } = await supabase
+    // Get all activities in competition window
+    // Try with hidden filter first, fall back to without if column doesn't exist
+    let activities: any[] | null = null;
+    let activitiesError: any = null;
+
+    // First try with hidden filter
+    const resultWithHidden = await supabase
       .from('activities')
-      .select('athlete_id, zone_points')
-      .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false');
+      .select('athlete_id, zone_points, hidden')
+      .eq('in_competition_window', true);
+
+    if (resultWithHidden.error) {
+      console.error('Error fetching activities:', resultWithHidden.error);
+      // If error mentions hidden column, try without it
+      const resultWithoutHidden = await supabase
+        .from('activities')
+        .select('athlete_id, zone_points')
+        .eq('in_competition_window', true);
+
+      activities = resultWithoutHidden.data;
+      activitiesError = resultWithoutHidden.error;
+    } else {
+      // Filter out hidden activities in code (handles NULL, false, and missing column)
+      activities = (resultWithHidden.data || []).filter(
+        (a: any) => a.hidden !== true
+      );
+    }
 
     if (activitiesError) {
       console.error('Error fetching activities:', activitiesError);

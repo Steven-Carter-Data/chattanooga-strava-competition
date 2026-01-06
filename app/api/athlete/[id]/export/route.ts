@@ -53,7 +53,6 @@ export async function GET(
       `)
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false });
 
     if (activitiesError) {
@@ -64,6 +63,9 @@ export async function GET(
       );
     }
 
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter((a: any) => a.hidden !== true);
+
     return NextResponse.json({
       success: true,
       data: {
@@ -71,8 +73,8 @@ export async function GET(
           firstname: athlete.firstname,
           lastname: athlete.lastname,
         },
-        activities: activities || [],
-        total_count: activities?.length || 0,
+        activities: filteredActivities,
+        total_count: filteredActivities.length,
       },
     });
   } catch (error) {

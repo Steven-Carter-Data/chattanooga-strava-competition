@@ -16,10 +16,9 @@ export async function GET(
     // Filter out hidden activities (duplicates/merged)
     const { data: activities, error: activitiesError } = await supabase
       .from('activities')
-      .select('start_date, zone_points')
+      .select('start_date, zone_points, hidden')
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: true });
 
     if (activitiesError) {
@@ -29,6 +28,9 @@ export async function GET(
         { status: 500 }
       );
     }
+
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter((a: any) => a.hidden !== true);
 
     // Get competition config to determine date range (automatically selects based on current date)
     const { data: competitionConfig } = await getActiveCompetitionConfig(supabase);
@@ -48,7 +50,7 @@ export async function GET(
       activityCount: number;
     }> = new Map();
 
-    activities?.forEach((activity) => {
+    filteredActivities?.forEach((activity) => {
       if (activity.start_date && activity.zone_points) {
         const date = new Date(activity.start_date);
         const weekStart = new Date(date);

@@ -36,7 +36,6 @@ export async function GET(
         )
       `)
       .eq('athlete_id', athleteId)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: true });
 
     if (error) {
@@ -47,7 +46,10 @@ export async function GET(
       );
     }
 
-    if (!activities || activities.length === 0) {
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter((a: any) => a.hidden !== true);
+
+    if (!filteredActivities || filteredActivities.length === 0) {
       return NextResponse.json({
         success: true,
         data: {
@@ -62,7 +64,7 @@ export async function GET(
     // Zone weights: Z1=1, Z2=1.5, Z3=2, Z4=3, Z5=4 (approximates training stress)
     const zoneWeights = [1, 1.5, 2, 3, 4];
 
-    const activitiesWithLoad = activities.map((activity) => {
+    const activitiesWithLoad = filteredActivities.map((activity) => {
       const hrZones = activity.heart_rate_zones?.[0] || activity.heart_rate_zones;
 
       let trainingLoad = 0;
@@ -223,7 +225,7 @@ export async function GET(
       data: {
         hasData: true,
         summary: {
-          totalActivities: activities.length,
+          totalActivities: filteredActivities.length,
           totalTrainingLoad: activitiesWithLoad.reduce((sum, a) => sum + a.training_load, 0),
           avgWeeklyLoad: weeks.length > 0
             ? weeks.reduce((sum, w) => sum + w.load, 0) / weeks.length

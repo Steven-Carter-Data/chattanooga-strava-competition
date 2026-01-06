@@ -29,7 +29,7 @@ export async function GET(
     // Get all activities with HR zones for this athlete in the competition window
     // Query activities table directly to get exclude_from_pace_analysis flag
     // Filter out hidden activities (duplicates/merged activities)
-    const { data: activities, error: activitiesError } = await supabase
+    const { data: rawActivities, error: activitiesError } = await supabase
       .from('activities')
       .select(`
         id,
@@ -58,8 +58,10 @@ export async function GET(
       `)
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false });
+
+    // Filter out hidden activities in code (handles NULL, false, and missing column)
+    const activities = (rawActivities || []).filter((a: any) => a.hidden !== true);
 
     if (activitiesError) {
       console.error('Error fetching activities:', activitiesError);

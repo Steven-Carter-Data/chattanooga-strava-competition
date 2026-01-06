@@ -30,8 +30,6 @@ export async function GET(
         hidden
       `)
       .eq('athlete_id', athleteId)
-      .or('exclude_from_pace_analysis.is.null,exclude_from_pace_analysis.eq.false')
-      .or('hidden.is.null,hidden.eq.false')
       .gt('distance_m', 0)
       .gt('moving_time_s', 0)
       .order('start_date', { ascending: true });
@@ -44,7 +42,12 @@ export async function GET(
       );
     }
 
-    if (!activities || activities.length === 0) {
+    // Filter out hidden and excluded activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter(
+      (a: any) => a.hidden !== true && a.exclude_from_pace_analysis !== true
+    );
+
+    if (!filteredActivities || filteredActivities.length === 0) {
       return NextResponse.json({
         success: true,
         data: {
@@ -57,7 +60,7 @@ export async function GET(
     // Group activities by sport type
     const sportData: Record<string, any[]> = {};
 
-    for (const activity of activities) {
+    for (const activity of filteredActivities) {
       const sport = activity.sport_type;
       if (!sportData[sport]) {
         sportData[sport] = [];

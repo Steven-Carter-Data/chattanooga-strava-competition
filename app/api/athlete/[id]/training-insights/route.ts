@@ -33,7 +33,6 @@ export async function GET(
         )
       `)
       .eq('athlete_id', athleteId)
-      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: true });
 
     if (error) {
@@ -44,7 +43,10 @@ export async function GET(
       );
     }
 
-    if (!activities || activities.length === 0) {
+    // Filter out hidden activities in code (handles NULL values gracefully)
+    const filteredActivities = (activities || []).filter((a: any) => a.hidden !== true);
+
+    if (!filteredActivities || filteredActivities.length === 0) {
       return NextResponse.json({
         success: true,
         data: {
@@ -87,7 +89,7 @@ export async function GET(
       other: { time: 0, distance: 0, activities: 0, points: 0 },
     };
 
-    for (const activity of activities) {
+    for (const activity of filteredActivities) {
       const discipline = sportMapping[activity.sport_type] || 'other';
       sportBalance[discipline].time += activity.moving_time_s || 0;
       sportBalance[discipline].distance += activity.distance_m || 0;
@@ -136,13 +138,13 @@ export async function GET(
     const weeksToRace = Math.ceil(daysToRace / 7);
 
     // Calculate training metrics for last 28 days
-    const last28Days = activities.filter(a => {
+    const last28Days = filteredActivities.filter(a => {
       const actDate = new Date(a.start_date);
       const diffDays = (today.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 28;
     });
 
-    const last7Days = activities.filter(a => {
+    const last7Days = filteredActivities.filter(a => {
       const actDate = new Date(a.start_date);
       const diffDays = (today.getTime() - actDate.getTime()) / (1000 * 60 * 60 * 24);
       return diffDays <= 7;
@@ -153,7 +155,7 @@ export async function GET(
 
     // Calculate daily loads
     const dailyLoads: Record<string, number> = {};
-    for (const activity of activities) {
+    for (const activity of filteredActivities) {
       const dateStr = new Date(activity.start_date).toISOString().split('T')[0];
       const hrZones = activity.heart_rate_zones?.[0] || activity.heart_rate_zones;
 
@@ -339,7 +341,7 @@ export async function GET(
           recommendations,
         },
         totals: {
-          activities: activities.length,
+          activities: filteredActivities.length,
           triathlonActivities: sportBalance.swim.activities + sportBalance.bike.activities + sportBalance.run.activities,
           totalTime: sportBalance.swim.time + sportBalance.bike.time + sportBalance.run.time + sportBalance.other.time,
           totalDistance: sportBalance.swim.distance + sportBalance.bike.distance + sportBalance.run.distance,
