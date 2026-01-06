@@ -13,11 +13,13 @@ export async function GET(
     const { id: athleteId } = await params;
 
     // Get all activities for this athlete in the competition window
+    // Filter out hidden activities (duplicates/merged)
     const { data: activities, error: activitiesError } = await supabase
-      .from('activity_detail')
+      .from('activities')
       .select('start_date, zone_points')
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
+      .eq('hidden', false)
       .order('start_date', { ascending: true });
 
     if (activitiesError) {

@@ -20,13 +20,41 @@ export async function GET() {
     console.log('Week range:', weekStart.toISOString(), 'to', weekEnd.toISOString());
 
     // Get all activities for this week
-    const { data: activities, error: activitiesError } = await supabase
-      .from('activity_detail')
-      .select('*')
+    // Filter out hidden activities (duplicates/merged)
+    const { data: rawActivities, error: activitiesError } = await supabase
+      .from('activities')
+      .select(`
+        id,
+        athlete_id,
+        start_date,
+        zone_points,
+        distance_m,
+        moving_time_s,
+        athletes (
+          firstname,
+          lastname,
+          profile_image_url
+        )
+      `)
       .eq('in_competition_window', true)
+      .eq('hidden', false)
       .gte('start_date', weekStart.toISOString())
       .lt('start_date', weekEnd.toISOString())
       .order('start_date', { ascending: false });
+
+    // Flatten the response to match previous format
+    const activities = rawActivities?.map((activity) => {
+      const athlete = Array.isArray(activity.athletes)
+        ? activity.athletes[0]
+        : activity.athletes;
+      return {
+        ...activity,
+        firstname: athlete?.firstname || '',
+        lastname: athlete?.lastname || '',
+        profile_image_url: athlete?.profile_image_url || null,
+        athletes: undefined,
+      };
+    });
 
     if (activitiesError) {
       console.error('Error fetching weekly activities:', activitiesError);

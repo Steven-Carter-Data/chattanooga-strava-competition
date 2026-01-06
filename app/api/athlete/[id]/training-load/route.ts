@@ -14,6 +14,7 @@ export async function GET(
     const { id: athleteId } = await params;
 
     // Fetch all activities with HR zone data
+    // Filter out hidden activities (duplicates/merged)
     const { data: activities, error } = await supabase
       .from('activities')
       .select(`
@@ -25,6 +26,7 @@ export async function GET(
         zone_points,
         average_heartrate,
         max_heartrate,
+        hidden,
         heart_rate_zones (
           zone_1_time_s,
           zone_2_time_s,
@@ -34,6 +36,7 @@ export async function GET(
         )
       `)
       .eq('athlete_id', athleteId)
+      .eq('hidden', false)
       .order('start_date', { ascending: true });
 
     if (error) {

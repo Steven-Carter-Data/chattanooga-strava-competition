@@ -14,6 +14,7 @@ export async function GET(
 
     // Fetch all activities with distance and time
     // Filter out activities marked as excluded from pace analysis (e.g., drill sessions)
+    // Also filter out hidden activities (duplicates/merged)
     const { data: activities, error } = await supabase
       .from('activities')
       .select(`
@@ -25,10 +26,12 @@ export async function GET(
         moving_time_s,
         average_speed_mps,
         zone_points,
-        exclude_from_pace_analysis
+        exclude_from_pace_analysis,
+        hidden
       `)
       .eq('athlete_id', athleteId)
       .eq('exclude_from_pace_analysis', false)
+      .eq('hidden', false)
       .gt('distance_m', 0)
       .gt('moving_time_s', 0)
       .order('start_date', { ascending: true });

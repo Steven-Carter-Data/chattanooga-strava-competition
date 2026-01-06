@@ -9,38 +9,56 @@ import { LeaderboardEntry } from '@/lib/types';
 export async function GET() {
   try {
     // Get all athletes with their points (if any)
+    // Filter activities to only include those in competition window and not hidden
     const { data, error } = await supabase
       .from('athletes')
       .select(`
         id,
         firstname,
         lastname,
-        activities (
-          zone_points
+        activities!inner (
+          zone_points,
+          in_competition_window,
+          hidden
         )
       `)
+      .eq('activities.in_competition_window', true)
+      .eq('activities.hidden', false)
+      .order('firstname', { ascending: true });
+
+    // Also get athletes with no qualifying activities
+    const { data: allAthletes } = await supabase
+      .from('athletes')
+      .select('id, firstname, lastname')
       .order('firstname', { ascending: true });
 
     if (error) {
       console.error('Error fetching athletes:', error);
-      return NextResponse.json(
-        { error: 'Failed to fetch leaderboard' },
-        { status: 500 }
-      );
+      // Fall back to all athletes if the filtered query fails
     }
 
-    // Calculate totals for each athlete
-    const leaderboard: LeaderboardEntry[] = (data || []).map((athlete: any) => {
+    // Build a map of athlete points from filtered activities
+    const athletePointsMap: Record<string, { points: number; count: number }> = {};
+    (data || []).forEach((athlete: any) => {
       const totalPoints = athlete.activities?.reduce((sum: number, activity: any) => {
         return sum + (parseFloat(activity.zone_points) || 0);
       }, 0) || 0;
+      athletePointsMap[athlete.id] = {
+        points: totalPoints,
+        count: athlete.activities?.length || 0,
+      };
+    });
+
+    // Calculate totals for each athlete (include all athletes, even those with 0 points)
+    const leaderboard: LeaderboardEntry[] = (allAthletes || []).map((athlete: any) => {
+      const stats = athletePointsMap[athlete.id] || { points: 0, count: 0 };
 
       return {
         athlete_id: athlete.id,
         firstname: athlete.firstname || '',
         lastname: athlete.lastname || '',
-        total_points: totalPoints,
-        activity_count: athlete.activities?.length || 0,
+        total_points: stats.points,
+        activity_count: stats.count,
       };
     });
 

@@ -27,11 +27,33 @@ export async function GET(
     }
 
     // Get ALL activities with HR zones for this athlete in the competition window
+    // Filter out hidden activities (duplicates/merged)
     const { data: activities, error: activitiesError } = await supabase
-      .from('activity_detail')
-      .select('*')
+      .from('activities')
+      .select(`
+        id,
+        strava_activity_id,
+        name,
+        sport_type,
+        start_date,
+        distance_m,
+        moving_time_s,
+        average_heartrate,
+        max_heartrate,
+        zone_points,
+        in_competition_window,
+        hidden,
+        heart_rate_zones (
+          zone_1_time_s,
+          zone_2_time_s,
+          zone_3_time_s,
+          zone_4_time_s,
+          zone_5_time_s
+        )
+      `)
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
+      .eq('hidden', false)
       .order('start_date', { ascending: false });
 
     if (activitiesError) {
