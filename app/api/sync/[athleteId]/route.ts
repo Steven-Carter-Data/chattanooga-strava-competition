@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import { getAthleteAccessToken } from '@/lib/strava';
-import { fetchAthleteZones, calculateHRZonesWithCustomBoundaries } from '@/lib/strava-zones';
+import { fetchAthleteZones, fetchActivityZones, extractHRZoneTimes } from '@/lib/strava-zones';
 
 // Activity types excluded from the competition
 // These activities will not be synced or count toward points
@@ -277,38 +277,15 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     console.log(`Activity ${activity.id} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${activity.moving_time / 60} min × 1)`);
   }
 
-  // Fetch detailed activity data for HR streams
-  // This is fetched for ALL activities (including swim) so HR zone data can be displayed
-  const detailedResponse = await fetch(
-    `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=heartrate,time&key_by_type=true`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+  // Fetch activity zones directly from Strava API
+  // This returns the EXACT zone distribution that Strava displays, no calculation needed
+  const activityZones = await fetchActivityZones(activity.id, accessToken);
 
-  if (detailedResponse.ok) {
-    const streams = await detailedResponse.json();
+  if (activityZones) {
+    const zones = extractHRZoneTimes(activityZones);
 
-    if (streams.heartrate && streams.time) {
-      // Calculate HR zones using athlete's custom zones if available
-      const hrData = streams.heartrate.data;
-      const timeData = streams.time.data;
-
-      let zones;
-      if (athleteZones?.heart_rate?.zones) {
-        // Use athlete's custom HR zone boundaries from Strava
-        zones = calculateHRZonesWithCustomBoundaries(hrData, timeData, athleteZones.heart_rate.zones);
-        console.log(`Calculated zones for activity ${activity.id} using custom boundaries`);
-      } else if (activity.max_heartrate) {
-        // Fallback to max HR percentage calculation
-        zones = calculateSimpleZones(hrData, timeData, activity.max_heartrate);
-        console.log(`Calculated zones for activity ${activity.id} using max HR fallback`);
-      } else {
-        console.warn(`Skipping HR zones for activity ${activity.id} - no zone config or max HR`);
-        return;
-      }
+    if (zones) {
+      console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, zones);
 
       // Insert HR zones (for display purposes - swim points are NOT recalculated from this)
       await supabaseAdmin
@@ -321,11 +298,11 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
           zone_4_time_s: zones.zone_4,
           zone_5_time_s: zones.zone_5,
         });
-    } else if (isSwim) {
-      console.log(`Swim activity ${activity.id}: No HR data available from Strava`);
+    } else {
+      console.log(`Activity ${activity.id}: No HR zone distribution in Strava response`);
     }
-  } else if (isSwim) {
-    console.log(`Swim activity ${activity.id}: Could not fetch HR streams from Strava`);
+  } else {
+    console.log(`Activity ${activity.id}: Could not fetch activity zones from Strava`);
   }
 }
 
@@ -356,36 +333,14 @@ async function updateActivity(activity: any, athleteId: string, accessToken: str
     })
     .eq('id', existingActivity.id);
 
-  // Fetch and update HR streams if available
-  const detailedResponse = await fetch(
-    `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=heartrate,time&key_by_type=true`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
+  // Fetch activity zones directly from Strava API
+  const activityZones = await fetchActivityZones(activity.id, accessToken);
 
-  if (detailedResponse.ok) {
-    const streams = await detailedResponse.json();
+  if (activityZones) {
+    const zones = extractHRZoneTimes(activityZones);
 
-    if (streams.heartrate && streams.time) {
-      const hrData = streams.heartrate.data;
-      const timeData = streams.time.data;
-
-      let zones;
-      if (athleteZones?.heart_rate?.zones) {
-        // Use athlete's custom HR zone boundaries from Strava
-        zones = calculateHRZonesWithCustomBoundaries(hrData, timeData, athleteZones.heart_rate.zones);
-        console.log(`Updated zones for activity ${activity.id} using custom boundaries`);
-      } else if (activity.max_heartrate) {
-        // Fallback to max HR percentage calculation
-        zones = calculateSimpleZones(hrData, timeData, activity.max_heartrate);
-        console.log(`Updated zones for activity ${activity.id} using max HR fallback`);
-      } else {
-        console.warn(`Skipping HR zones update for activity ${activity.id} - no zone config or max HR`);
-        return;
-      }
+    if (zones) {
+      console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, zones);
 
       // Check if HR zones exist
       const { data: existingZones } = await supabaseAdmin

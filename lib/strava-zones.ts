@@ -10,6 +10,20 @@ export interface StravaHRZones {
   };
 }
 
+export interface StravaActivityZone {
+  score: number;
+  sensor_based: boolean;
+  custom_zones: boolean;
+  max: number;
+  distribution_buckets: Array<{
+    max: number;
+    min: number;
+    time: number; // Time in seconds spent in this zone
+  }>;
+  type: string; // "heartrate" or "power"
+  points: number;
+}
+
 /**
  * Fetch athlete's heart rate zone configuration from Strava
  * GET /athlete/zones
@@ -34,6 +48,69 @@ export async function fetchAthleteZones(
     console.error('Error fetching athlete zones:', error);
     return null;
   }
+}
+
+/**
+ * Fetch activity zones directly from Strava
+ * GET /activities/{id}/zones
+ * This returns the exact zone distribution that Strava displays
+ */
+export async function fetchActivityZones(
+  activityId: number,
+  accessToken: string
+): Promise<StravaActivityZone[] | null> {
+  try {
+    const response = await fetch(
+      `https://www.strava.com/api/v3/activities/${activityId}/zones`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    if (!response.ok) {
+      console.error(`Failed to fetch activity zones for ${activityId}:`, response.statusText);
+      return null;
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error(`Error fetching activity zones for ${activityId}:`, error);
+    return null;
+  }
+}
+
+/**
+ * Extract HR zone times from Strava's activity zones response
+ * Returns zone times in seconds, matching Strava exactly
+ */
+export function extractHRZoneTimes(
+  activityZones: StravaActivityZone[]
+): {
+  zone_1: number;
+  zone_2: number;
+  zone_3: number;
+  zone_4: number;
+  zone_5: number;
+} | null {
+  // Find the heartrate zone data
+  const hrZone = activityZones.find(z => z.type === 'heartrate');
+
+  if (!hrZone || !hrZone.distribution_buckets || hrZone.distribution_buckets.length < 5) {
+    console.warn('No valid HR zone distribution found');
+    return null;
+  }
+
+  // distribution_buckets contains time in seconds for each zone
+  // Strava returns 5 buckets for zones 1-5
+  return {
+    zone_1: hrZone.distribution_buckets[0]?.time || 0,
+    zone_2: hrZone.distribution_buckets[1]?.time || 0,
+    zone_3: hrZone.distribution_buckets[2]?.time || 0,
+    zone_4: hrZone.distribution_buckets[3]?.time || 0,
+    zone_5: hrZone.distribution_buckets[4]?.time || 0,
+  };
 }
 
 /**
