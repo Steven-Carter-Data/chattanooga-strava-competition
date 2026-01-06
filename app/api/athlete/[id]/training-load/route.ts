@@ -36,7 +36,7 @@ export async function GET(
         )
       `)
       .eq('athlete_id', athleteId)
-      .eq('hidden', false)
+      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: true });
 
     if (error) {

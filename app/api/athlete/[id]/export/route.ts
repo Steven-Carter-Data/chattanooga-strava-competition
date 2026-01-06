@@ -53,7 +53,7 @@ export async function GET(
       `)
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
-      .eq('hidden', false)
+      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false });
 
     if (activitiesError) {

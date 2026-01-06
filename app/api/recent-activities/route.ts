@@ -38,7 +38,7 @@ export async function GET() {
         )
       `)
       .eq('in_competition_window', true)
-      .eq('hidden', false)
+      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: false })
       .limit(20);
 

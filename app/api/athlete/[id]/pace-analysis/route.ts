@@ -30,8 +30,8 @@ export async function GET(
         hidden
       `)
       .eq('athlete_id', athleteId)
-      .eq('exclude_from_pace_analysis', false)
-      .eq('hidden', false)
+      .or('exclude_from_pace_analysis.is.null,exclude_from_pace_analysis.eq.false')
+      .or('hidden.is.null,hidden.eq.false')
       .gt('distance_m', 0)
       .gt('moving_time_s', 0)
       .order('start_date', { ascending: true });

@@ -37,7 +37,7 @@ export async function GET() {
         )
       `)
       .eq('in_competition_window', true)
-      .eq('hidden', false)
+      .or('hidden.is.null,hidden.eq.false')
       .gte('start_date', weekStart.toISOString())
       .lt('start_date', weekEnd.toISOString())
       .order('start_date', { ascending: false });

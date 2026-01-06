@@ -8,45 +8,44 @@ import { LeaderboardEntry } from '@/lib/types';
  */
 export async function GET() {
   try {
-    // Get all athletes with their points (if any)
-    // Filter activities to only include those in competition window and not hidden
-    const { data, error } = await supabase
-      .from('athletes')
-      .select(`
-        id,
-        firstname,
-        lastname,
-        activities!inner (
-          zone_points,
-          in_competition_window,
-          hidden
-        )
-      `)
-      .eq('activities.in_competition_window', true)
-      .eq('activities.hidden', false)
-      .order('firstname', { ascending: true });
-
-    // Also get athletes with no qualifying activities
-    const { data: allAthletes } = await supabase
+    // Get all athletes
+    const { data: allAthletes, error: athletesError } = await supabase
       .from('athletes')
       .select('id, firstname, lastname')
       .order('firstname', { ascending: true });
 
-    if (error) {
-      console.error('Error fetching athletes:', error);
-      // Fall back to all athletes if the filtered query fails
+    if (athletesError) {
+      console.error('Error fetching athletes:', athletesError);
+      return NextResponse.json(
+        { error: 'Failed to fetch athletes' },
+        { status: 500 }
+      );
     }
 
-    // Build a map of athlete points from filtered activities
+    // Get all activities in competition window that are not hidden
+    // Use explicit filter for hidden to handle NULL values (treat NULL as not hidden)
+    const { data: activities, error: activitiesError } = await supabase
+      .from('activities')
+      .select('athlete_id, zone_points')
+      .eq('in_competition_window', true)
+      .or('hidden.is.null,hidden.eq.false');
+
+    if (activitiesError) {
+      console.error('Error fetching activities:', activitiesError);
+      // Continue with empty activities if error
+    }
+
+    // Build a map of athlete points from activities
     const athletePointsMap: Record<string, { points: number; count: number }> = {};
-    (data || []).forEach((athlete: any) => {
-      const totalPoints = athlete.activities?.reduce((sum: number, activity: any) => {
-        return sum + (parseFloat(activity.zone_points) || 0);
-      }, 0) || 0;
-      athletePointsMap[athlete.id] = {
-        points: totalPoints,
-        count: athlete.activities?.length || 0,
-      };
+    (activities || []).forEach((activity: any) => {
+      const athleteId = activity.athlete_id;
+      const points = parseFloat(activity.zone_points) || 0;
+
+      if (!athletePointsMap[athleteId]) {
+        athletePointsMap[athleteId] = { points: 0, count: 0 };
+      }
+      athletePointsMap[athleteId].points += points;
+      athletePointsMap[athleteId].count += 1;
     });
 
     // Calculate totals for each athlete (include all athletes, even those with 0 points)

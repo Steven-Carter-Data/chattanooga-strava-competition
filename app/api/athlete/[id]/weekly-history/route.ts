@@ -19,7 +19,7 @@ export async function GET(
       .select('start_date, zone_points')
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
-      .eq('hidden', false)
+      .or('hidden.is.null,hidden.eq.false')
       .order('start_date', { ascending: true });
 
     if (activitiesError) {
