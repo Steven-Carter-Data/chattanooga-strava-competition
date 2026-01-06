@@ -31,6 +31,25 @@ function formatSportType(sport: string): string {
   return sport.replace(/([A-Z])/g, ' $1').trim();
 }
 
+// Helper function to format time in seconds to mm:ss format
+function formatTimeWithSeconds(totalSeconds: number): string {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
+// Helper function to format time in seconds to h:mm:ss or mm:ss format
+function formatDuration(totalSeconds: number): string {
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = Math.floor(totalSeconds % 60);
+
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  }
+  return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+}
+
 interface AthleteData {
   athlete: {
     id: string;
@@ -615,7 +634,7 @@ export default function AthletePage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-3 gap-2 sm:gap-4 text-xs sm:text-sm mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gold/10">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 text-xs sm:text-sm mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gold/10">
                       <div>
                         <div className="text-muted font-body uppercase tracking-wider text-xs mb-0.5 sm:mb-1">Dist</div>
                         <div className="font-body font-semibold text-foreground">{((activity.distance_m || 0) / 1609.34).toFixed(1)} mi</div>
@@ -623,7 +642,13 @@ export default function AthletePage() {
                       <div>
                         <div className="text-muted font-body uppercase tracking-wider text-xs mb-0.5 sm:mb-1">Time</div>
                         <div className="font-body font-semibold text-foreground">
-                          {Math.floor((activity.moving_time_s || 0) / 3600)}h {Math.floor(((activity.moving_time_s || 0) % 3600) / 60)}m
+                          {formatDuration(activity.moving_time_s || 0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-muted font-body uppercase tracking-wider text-xs mb-0.5 sm:mb-1">HR Time</div>
+                        <div className="font-body font-semibold text-foreground">
+                          {activityTotalZoneTime > 0 ? formatDuration(activityTotalZoneTime) : 'N/A'}
                         </div>
                       </div>
                       <div>
@@ -654,7 +679,7 @@ export default function AthletePage() {
                                   />
                                 </div>
                                 <div className="text-xs text-foreground font-body">
-                                  {timeMinutes}m
+                                  {formatTimeWithSeconds(activityZoneTime[zoneKey])}
                                 </div>
                                 <div className="text-xs text-muted font-body hidden sm:block">
                                   {percentage.toFixed(0)}%
