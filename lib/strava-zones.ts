@@ -40,12 +40,14 @@ export async function fetchAthleteZones(
  * Calculate time spent in each HR zone using athlete's custom zone boundaries
  * This matches Strava's zone calculation exactly
  *
- * Strava zone boundaries work as follows:
- * - Each zone has a min and max value
- * - Zone 1: min=0, max=125 and Zone 2: min=125, max=156
- * - When there's overlap (125 appears in both), Strava uses the HIGHER zone
- * - So HR=125 goes to Zone 2, not Zone 1
- * - We check zones from highest to lowest to handle overlaps correctly
+ * Strava zone boundaries: Each zone has min/max where max is INCLUSIVE
+ * Zone 1: min=0, max=125 means HR 0-125 is Zone 1
+ * Zone 2: min=125, max=156 means HR 126-156 is Zone 2
+ *
+ * The key insight: Strava uses the MAX value as the boundary.
+ * If HR <= zone[0].max, it's Zone 1
+ * If HR > zone[0].max && HR <= zone[1].max, it's Zone 2
+ * etc.
  */
 export function calculateHRZonesWithCustomBoundaries(
   hrData: number[],
@@ -76,22 +78,24 @@ export function calculateHRZonesWithCustomBoundaries(
     const hr = hrData[i];
     const duration = timeData[i + 1] - timeData[i]; // seconds between readings
 
-    // Check zones from highest to lowest to handle overlapping boundaries
-    // When boundary values overlap (e.g., Zone 1 max=125, Zone 2 min=125),
-    // Strava assigns the boundary value to the HIGHER zone
-    if (hr >= zones[4].min && (zones[4].max === -1 || hr <= zones[4].max)) {
-      // Zone 5 (often has max=-1 meaning "no upper limit")
-      zoneTimes.zone_5 += duration;
-    } else if (hr >= zones[3].min && hr <= zones[3].max) {
-      zoneTimes.zone_4 += duration;
-    } else if (hr >= zones[2].min && hr <= zones[2].max) {
-      zoneTimes.zone_3 += duration;
-    } else if (hr >= zones[1].min && hr <= zones[1].max) {
-      zoneTimes.zone_2 += duration;
-    } else if (hr >= zones[0].min && hr <= zones[0].max) {
+    // Use max values as boundaries - this matches Strava's zone assignment
+    // Zone 1: HR <= zone[0].max (e.g., HR <= 125)
+    // Zone 2: HR > zone[0].max && HR <= zone[1].max (e.g., HR 126-156)
+    // Zone 3: HR > zone[1].max && HR <= zone[2].max (e.g., HR 157-171)
+    // etc.
+    if (hr <= zones[0].max) {
       zoneTimes.zone_1 += duration;
+    } else if (hr <= zones[1].max) {
+      zoneTimes.zone_2 += duration;
+    } else if (hr <= zones[2].max) {
+      zoneTimes.zone_3 += duration;
+    } else if (hr <= zones[3].max) {
+      zoneTimes.zone_4 += duration;
+    } else if (zones[4].max === -1 || hr <= zones[4].max) {
+      // Zone 5 (max=-1 means no upper limit)
+      zoneTimes.zone_5 += duration;
     }
-    // HR values outside all zones are not counted
+    // HR values outside all zones are not counted (shouldn't happen)
   }
 
   return zoneTimes;
