@@ -53,8 +53,11 @@ export async function GET(
     filteredActivities?.forEach((activity) => {
       if (activity.start_date && activity.zone_points) {
         const date = new Date(activity.start_date);
+        const dayOfWeek = date.getDay();
+        // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
+        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
         const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+        weekStart.setDate(date.getDate() - daysFromMonday); // Start of week (Monday)
         weekStart.setHours(0, 0, 0, 0);
 
         const weekEnd = new Date(weekStart);
@@ -89,7 +92,10 @@ export async function GET(
     }> = [];
 
     let currentWeekStart = new Date(competitionStart);
-    currentWeekStart.setDate(competitionStart.getDate() - competitionStart.getDay());
+    const compStartDay = competitionStart.getDay();
+    // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
+    const compDaysFromMonday = compStartDay === 0 ? 6 : compStartDay - 1;
+    currentWeekStart.setDate(competitionStart.getDate() - compDaysFromMonday);
     currentWeekStart.setHours(0, 0, 0, 0);
 
     let cumulativePoints = 0;

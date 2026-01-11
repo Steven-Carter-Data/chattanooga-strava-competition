@@ -7,17 +7,25 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET() {
   try {
-    // Calculate start of current week (Sunday)
+    // Calculate start of current week (Monday)
     const now = new Date();
     const dayOfWeek = now.getDay();
+    // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
     const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - dayOfWeek);
+    weekStart.setDate(now.getDate() - daysFromMonday);
     weekStart.setHours(0, 0, 0, 0);
 
-    const weekEnd = new Date(weekStart);
-    weekEnd.setDate(weekStart.getDate() + 7);
+    // weekEndQuery is exclusive (for database lt query)
+    const weekEndQuery = new Date(weekStart);
+    weekEndQuery.setDate(weekStart.getDate() + 7);
 
-    console.log('Week range:', weekStart.toISOString(), 'to', weekEnd.toISOString());
+    // weekEndDisplay is inclusive (Sunday, for UI display)
+    const weekEndDisplay = new Date(weekStart);
+    weekEndDisplay.setDate(weekStart.getDate() + 6);
+    weekEndDisplay.setHours(23, 59, 59, 999);
+
+    console.log('Week range:', weekStart.toISOString(), 'to', weekEndQuery.toISOString());
 
     // Get all activities for this week
     // Filter out hidden activities (duplicates/merged)
@@ -39,7 +47,7 @@ export async function GET() {
       `)
       .eq('in_competition_window', true)
       .gte('start_date', weekStart.toISOString())
-      .lt('start_date', weekEnd.toISOString())
+      .lt('start_date', weekEndQuery.toISOString())
       .order('start_date', { ascending: false });
 
     // Filter and flatten the response
@@ -117,7 +125,7 @@ export async function GET() {
       success: true,
       data: {
         week_start: weekStart.toISOString(),
-        week_end: weekEnd.toISOString(),
+        week_end: weekEndDisplay.toISOString(),
         leaderboard: weeklyLeaderboard,
         stats: weekStats,
       },
