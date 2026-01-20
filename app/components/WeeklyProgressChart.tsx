@@ -6,6 +6,9 @@ interface WeekData {
   weekStart: string;
   weekEnd: string;
   weekLabel: string;
+  weekNumber: number;
+  isPartialWeek: boolean;
+  canBeOmitted: boolean;
   points: number;
   activityCount: number;
   cumulativePoints: number;
@@ -393,7 +396,7 @@ export default function WeeklyProgressChart({ athleteId }: WeeklyProgressChartPr
                   {showLabel && (
                     <span className={`text-xs font-body whitespace-nowrap ${isCurrentWeek ? 'text-gold font-semibold' : 'text-muted'}`}>
                       <span className="hidden sm:inline">{week.weekLabel}</span>
-                      <span className="sm:hidden">{week.weekLabel.split(' ')[0].slice(0, 3)} {week.weekLabel.split(' ')[1]}</span>
+                      <span className="sm:hidden">W{week.weekLabel.split(' ')[1]}</span>
                     </span>
                   )}
                 </div>

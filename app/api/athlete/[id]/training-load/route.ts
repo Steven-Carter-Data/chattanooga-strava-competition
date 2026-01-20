@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST } from '@/lib/timezone';
 
 /**
  * GET /api/athlete/[id]/training-load
@@ -108,7 +109,7 @@ export async function GET(
       dailyLoad[dateStr].activities++;
     }
 
-    // Calculate weekly totals
+    // Calculate weekly totals (using EST timezone)
     const weeklyLoad: Record<string, {
       load: number;
       activities: number;
@@ -118,8 +119,7 @@ export async function GET(
 
     for (const activity of activitiesWithLoad) {
       const date = new Date(activity.date);
-      const weekStart = new Date(date);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStart = getWeekStartEST(date);
       const weekKey = weekStart.toISOString().split('T')[0];
 
       if (!weeklyLoad[weekKey]) {

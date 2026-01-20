@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
+import { getWeekStartEST, getWeekEndEST, formatDateEST } from '@/lib/timezone';
 
 /**
  * GET /api/athlete/[id]/weekly-history
@@ -42,7 +43,7 @@ export async function GET(
 
     const now = new Date();
 
-    // Group activities by week (Sunday start)
+    // Group activities by week (Monday-Sunday in EST)
     const weeklyData: Map<string, {
       weekStart: Date;
       weekEnd: Date;
@@ -53,17 +54,9 @@ export async function GET(
     filteredActivities?.forEach((activity) => {
       if (activity.start_date && activity.zone_points) {
         const date = new Date(activity.start_date);
-        const dayOfWeek = date.getDay();
-        // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
-        const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - daysFromMonday); // Start of week (Monday)
-        weekStart.setHours(0, 0, 0, 0);
-
-        const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekStart.getDate() + 6);
-        weekEnd.setHours(23, 59, 59, 999);
-
+        // Use EST timezone for week boundaries
+        const weekStart = getWeekStartEST(date);
+        const weekEnd = getWeekEndEST(date);
         const weekKey = weekStart.toISOString().split('T')[0];
 
         const existing = weeklyData.get(weekKey);
@@ -82,44 +75,83 @@ export async function GET(
     });
 
     // Generate all weeks from competition start to now (fill gaps with zero)
+    // Competition starts Jan 1, 2026 (Wednesday)
+    // Week 0 = Jan 1-4 (partial week, cannot be omitted)
+    // Week 1 = Jan 5-11 (first full Monday-Sunday, can be omitted)
+    // Week 2 = Jan 12-18, etc.
     const allWeeks: Array<{
       weekStart: string;
       weekEnd: string;
       weekLabel: string;
+      weekNumber: number;
+      isPartialWeek: boolean;
+      canBeOmitted: boolean;
       points: number;
       activityCount: number;
       cumulativePoints: number;
     }> = [];
 
-    let currentWeekStart = new Date(competitionStart);
-    const compStartDay = competitionStart.getDay();
-    // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
-    const compDaysFromMonday = compStartDay === 0 ? 6 : compStartDay - 1;
-    currentWeekStart.setDate(competitionStart.getDate() - compDaysFromMonday);
-    currentWeekStart.setHours(0, 0, 0, 0);
+    // Competition start date (Jan 1, 2026)
+    const compStartEST = new Date(competitionStart);
+
+    // Check if competition starts on a Monday
+    const compStartDay = compStartEST.getDay();
+    const startsOnMonday = compStartDay === 1;
 
     let cumulativePoints = 0;
-    let weekNumber = 1;
+    let weekNumber = 0;
+
+    if (!startsOnMonday) {
+      // Week 0: Partial week from competition start to the following Sunday
+      const week0Start = new Date(competitionStart);
+      const week0End = getWeekEndEST(competitionStart);
+      const week0Key = getWeekStartEST(competitionStart).toISOString().split('T')[0];
+
+      const week0Data = weeklyData.get(week0Key);
+      const week0Points = week0Data?.points || 0;
+      cumulativePoints += week0Points;
+
+      allWeeks.push({
+        weekStart: week0Start.toISOString(),
+        weekEnd: week0End.toISOString(),
+        weekLabel: 'Week 0',
+        weekNumber: 0,
+        isPartialWeek: true,
+        canBeOmitted: false, // Partial weeks cannot be omitted
+        points: Math.round(week0Points * 10) / 10,
+        activityCount: week0Data?.activityCount || 0,
+        cumulativePoints: Math.round(cumulativePoints * 10) / 10,
+      });
+
+      weekNumber = 1;
+    }
+
+    // Start from the first full Monday after competition start
+    let currentWeekStart: Date;
+    if (startsOnMonday) {
+      currentWeekStart = new Date(competitionStart);
+      weekNumber = 1;
+    } else {
+      // Get the Monday after the competition start
+      currentWeekStart = getWeekStartEST(competitionStart);
+      currentWeekStart.setDate(currentWeekStart.getDate() + 7);
+    }
 
     while (currentWeekStart <= now) {
       const weekKey = currentWeekStart.toISOString().split('T')[0];
-      const weekEnd = new Date(currentWeekStart);
-      weekEnd.setDate(currentWeekStart.getDate() + 6);
+      const weekEnd = getWeekEndEST(currentWeekStart);
 
       const weekData = weeklyData.get(weekKey);
       const weekPoints = weekData?.points || 0;
       cumulativePoints += weekPoints;
 
-      // Format: "Nov 24" for short label
-      const weekLabel = currentWeekStart.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-      });
-
       allWeeks.push({
         weekStart: currentWeekStart.toISOString(),
         weekEnd: weekEnd.toISOString(),
-        weekLabel,
+        weekLabel: `Week ${weekNumber}`,
+        weekNumber,
+        isPartialWeek: false,
+        canBeOmitted: true, // Full weeks can be omitted
         points: Math.round(weekPoints * 10) / 10,
         activityCount: weekData?.activityCount || 0,
         cumulativePoints: Math.round(cumulativePoints * 10) / 10,

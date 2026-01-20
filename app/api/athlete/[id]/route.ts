@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST } from '@/lib/timezone';
 
 /**
  * GET /api/athlete/[id]
@@ -89,13 +90,12 @@ export async function GET(
       return acc;
     }, {});
 
-    // Calculate weekly breakdown
+    // Calculate weekly breakdown (using EST timezone)
     const weeklyStats: { [week: string]: number } = {};
     activities?.forEach((activity) => {
       if (activity.start_date) {
         const date = new Date(activity.start_date);
-        const weekStart = new Date(date);
-        weekStart.setDate(date.getDate() - date.getDay()); // Start of week (Sunday)
+        const weekStart = getWeekStartEST(date);
         const weekKey = weekStart.toISOString().split('T')[0];
 
         weeklyStats[weekKey] = (weeklyStats[weekKey] || 0) + (activity.zone_points || 0);

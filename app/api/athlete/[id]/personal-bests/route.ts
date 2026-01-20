@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST } from '@/lib/timezone';
 
 /**
  * GET /api/athlete/[id]/personal-bests
@@ -245,15 +246,13 @@ function calculatePersonalBests(activities: any[]) {
 }
 
 function calculateWeeklyStats(activities: any[]) {
-  // Group activities by week
+  // Group activities by week (using EST timezone)
   const weeklyData: Record<string, { points: number; activities: number; startDate: string }> = {};
 
   for (const activity of activities) {
     const date = new Date(activity.start_date);
-    // Get Monday of the week
-    const day = date.getDay();
-    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
-    const monday = new Date(date.setDate(diff));
+    // Get Monday of the week in EST
+    const monday = getWeekStartEST(date);
     const weekKey = monday.toISOString().split('T')[0];
 
     if (!weeklyData[weekKey]) {

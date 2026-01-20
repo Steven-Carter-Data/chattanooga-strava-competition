@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from 'react';
 
+interface CadenceStats {
+  avgCadence: number;
+  currentAvgCadence: number;
+  minCadence: number;
+  maxCadence: number;
+  trend: 'improving' | 'stable' | 'declining';
+  activitiesWithCadence: number;
+}
+
 interface PaceData {
   activityCount: number;
   paceUnit: string;
@@ -31,7 +40,9 @@ interface PaceData {
     date: string;
     pace: number;
     paceUnit: string;
+    cadence?: number;
   }>;
+  cadenceStats?: CadenceStats | null;
 }
 
 interface PaceAnalysisData {
@@ -235,6 +246,84 @@ export default function PaceAnalysis({ athleteId }: { athleteId: string }) {
         </div>
       </div>
 
+      {/* Cadence Stats - Only shown for Run sport */}
+      {selectedSport === 'Run' && sportData.cadenceStats && (
+        <div className="mb-6">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span className="text-xs font-body text-gold uppercase tracking-wider">Cadence Analysis</span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {/* Current Avg Cadence */}
+            <div className="bg-background border border-gold/20 p-3 sm:p-4 text-center">
+              <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Current Avg</div>
+              <div className="text-xl sm:text-2xl font-display gradient-text">
+                {sportData.cadenceStats.currentAvgCadence}
+              </div>
+              <div className="text-xs text-muted font-body">spm</div>
+            </div>
+
+            {/* Overall Avg Cadence */}
+            <div className="bg-background border border-gold/20 p-3 sm:p-4 text-center">
+              <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Overall Avg</div>
+              <div className="text-xl sm:text-2xl font-display text-foreground">
+                {sportData.cadenceStats.avgCadence}
+              </div>
+              <div className="text-xs text-muted font-body">spm</div>
+            </div>
+
+            {/* Cadence Range */}
+            <div className="bg-background border border-gold/20 p-3 sm:p-4 text-center">
+              <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Range</div>
+              <div className="text-lg sm:text-xl font-display text-foreground">
+                {sportData.cadenceStats.minCadence} - {sportData.cadenceStats.maxCadence}
+              </div>
+              <div className="text-xs text-muted font-body">spm</div>
+            </div>
+
+            {/* Cadence Trend */}
+            <div className="bg-background border border-gold/20 p-3 sm:p-4 text-center">
+              <div className="text-xs text-muted font-body uppercase tracking-wider mb-1">Trend</div>
+              <div className={`text-lg sm:text-xl font-display flex items-center justify-center gap-1 ${
+                sportData.cadenceStats.trend === 'improving' ? 'text-green-500' :
+                sportData.cadenceStats.trend === 'declining' ? 'text-red-500' : 'text-muted'
+              }`}>
+                {sportData.cadenceStats.trend === 'improving' && (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                    </svg>
+                    <span className="text-sm uppercase">Up</span>
+                  </>
+                )}
+                {sportData.cadenceStats.trend === 'declining' && (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                    <span className="text-sm uppercase">Down</span>
+                  </>
+                )}
+                {sportData.cadenceStats.trend === 'stable' && (
+                  <>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 12h14" />
+                    </svg>
+                    <span className="text-sm uppercase">Stable</span>
+                  </>
+                )}
+              </div>
+              <div className="text-xs text-muted font-body">last 5 runs</div>
+            </div>
+          </div>
+          <div className="mt-2 text-xs text-muted font-body text-center">
+            Based on {sportData.cadenceStats.activitiesWithCadence} runs with cadence data
+          </div>
+        </div>
+      )}
+
       {/* Chart */}
       {sportData.chartData.length >= 2 && (
         <div className="bg-background border border-gold/20 p-4 mb-6">
@@ -373,11 +462,22 @@ export default function PaceAnalysis({ athleteId }: { athleteId: string }) {
                     {new Date(activity.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                   </div>
                 </div>
-                <div className="text-right">
-                  <div className="text-sm font-display text-gold">
-                    {formatPace(activity.pace, activity.paceUnit)}
+                <div className="flex items-center gap-4">
+                  {/* Show cadence for runs */}
+                  {selectedSport === 'Run' && activity.cadence && (
+                    <div className="text-right">
+                      <div className="text-sm font-display text-muted">
+                        {Math.round(activity.cadence)}
+                      </div>
+                      <div className="text-xs text-muted/70 font-body">spm</div>
+                    </div>
+                  )}
+                  <div className="text-right">
+                    <div className="text-sm font-display text-gold">
+                      {formatPace(activity.pace, activity.paceUnit)}
+                    </div>
+                    <div className="text-xs text-muted font-body">{activity.paceUnit}</div>
                   </div>
-                  <div className="text-xs text-muted font-body">{activity.paceUnit}</div>
                 </div>
               </div>
             ))}

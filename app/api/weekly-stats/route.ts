@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST, getWeekEndEST } from '@/lib/timezone';
 
 /**
  * GET /api/weekly-stats
@@ -7,23 +8,16 @@ import { supabase } from '@/lib/supabase';
  */
 export async function GET() {
   try {
-    // Calculate start of current week (Monday)
+    // Calculate start of current week (Monday in EST)
     const now = new Date();
-    const dayOfWeek = now.getDay();
-    // Convert Sunday=0 to 6, Monday=1 to 0, etc. (Monday-based week)
-    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
-    const weekStart = new Date(now);
-    weekStart.setDate(now.getDate() - daysFromMonday);
-    weekStart.setHours(0, 0, 0, 0);
+    const weekStart = getWeekStartEST(now);
 
     // weekEndQuery is exclusive (for database lt query)
     const weekEndQuery = new Date(weekStart);
     weekEndQuery.setDate(weekStart.getDate() + 7);
 
     // weekEndDisplay is inclusive (Sunday, for UI display)
-    const weekEndDisplay = new Date(weekStart);
-    weekEndDisplay.setDate(weekStart.getDate() + 6);
-    weekEndDisplay.setHours(23, 59, 59, 999);
+    const weekEndDisplay = getWeekEndEST(now);
 
     console.log('Week range:', weekStart.toISOString(), 'to', weekEndQuery.toISOString());
 

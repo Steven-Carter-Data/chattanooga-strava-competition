@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST } from '@/lib/timezone';
 
 /**
  * GET /api/athlete/[id]/pace-analysis
@@ -25,6 +26,7 @@ export async function GET(
         distance_m,
         moving_time_s,
         average_speed_mps,
+        average_cadence,
         zone_points,
         exclude_from_pace_analysis,
         hidden
@@ -104,6 +106,7 @@ export async function GET(
           pace,
           paceUnit,
           zone_points: parseFloat(activity.zone_points) || 0,
+          cadence: activity.average_cadence || null,
         });
       }
     }
@@ -171,12 +174,11 @@ export async function GET(
         else if (trendPct < -3) recentTrend = 'declining';
       }
 
-      // Prepare chart data (group by week)
+      // Prepare chart data (group by week in EST)
       const weeklyData: Record<string, { paces: number[], count: number }> = {};
       for (const activity of sortedData) {
         const date = new Date(activity.date);
-        const weekStart = new Date(date);
-        weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+        const weekStart = getWeekStartEST(date);
         const weekKey = weekStart.toISOString().split('T')[0];
 
         if (!weeklyData[weekKey]) {
@@ -194,6 +196,47 @@ export async function GET(
         }))
         .sort((a, b) => a.week.localeCompare(b.week))
         .slice(-12); // Last 12 weeks
+
+      // Calculate cadence stats for running activities
+      let cadenceStats = null;
+      if (sport === 'Run') {
+        const activitiesWithCadence = data.filter((a: any) => a.cadence != null && a.cadence > 0);
+        if (activitiesWithCadence.length > 0) {
+          const cadences = activitiesWithCadence.map((a: any) => a.cadence);
+          const avgCadence = cadences.reduce((sum: number, c: number) => sum + c, 0) / cadences.length;
+          const minCadence = Math.min(...cadences);
+          const maxCadence = Math.max(...cadences);
+
+          // Recent cadence trend (last 5 vs previous 5)
+          const sortedByCadence = [...activitiesWithCadence].sort((a: any, b: any) =>
+            new Date(a.date).getTime() - new Date(b.date).getTime()
+          );
+          const last5Cadence = sortedByCadence.slice(-5);
+          const prev5Cadence = sortedByCadence.slice(-10, -5);
+
+          let cadenceTrend: 'improving' | 'stable' | 'declining' = 'stable';
+          if (prev5Cadence.length >= 3 && last5Cadence.length >= 3) {
+            const last5AvgCadence = last5Cadence.reduce((sum: number, a: any) => sum + a.cadence, 0) / last5Cadence.length;
+            const prev5AvgCadence = prev5Cadence.reduce((sum: number, a: any) => sum + a.cadence, 0) / prev5Cadence.length;
+            const trendPct = ((last5AvgCadence - prev5AvgCadence) / prev5AvgCadence) * 100;
+            if (trendPct > 2) cadenceTrend = 'improving';
+            else if (trendPct < -2) cadenceTrend = 'declining';
+          }
+
+          // Current average (recent half)
+          const recentCadenceData = sortedByCadence.slice(Math.floor(sortedByCadence.length / 2));
+          const currentAvgCadence = recentCadenceData.reduce((sum: number, a: any) => sum + a.cadence, 0) / recentCadenceData.length;
+
+          cadenceStats = {
+            avgCadence: Math.round(avgCadence * 10) / 10,
+            currentAvgCadence: Math.round(currentAvgCadence * 10) / 10,
+            minCadence: Math.round(minCadence * 10) / 10,
+            maxCadence: Math.round(maxCadence * 10) / 10,
+            trend: cadenceTrend,
+            activitiesWithCadence: activitiesWithCadence.length,
+          };
+        }
+      }
 
       sportAnalysis[sport] = {
         activityCount: data.length,
@@ -215,6 +258,7 @@ export async function GET(
         },
         chartData,
         recentActivities: sortedData.slice(-5).reverse(),
+        cadenceStats,
       };
     }
 

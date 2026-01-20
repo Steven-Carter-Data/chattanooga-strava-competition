@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { getWeekStartEST } from '@/lib/timezone';
 
 /**
  * GET /api/compare?athletes=id1,id2
@@ -127,8 +128,7 @@ async function fetchAthleteComparisonData(athleteId: string) {
     const weeks = new Set<string>();
     for (const activity of activityList) {
       const date = new Date(activity.start_date);
-      const weekStart = new Date(date);
-      weekStart.setDate(weekStart.getDate() - weekStart.getDay());
+      const weekStart = getWeekStartEST(date);
       weeks.add(weekStart.toISOString().split('T')[0]);
     }
     const numWeeks = weeks.size || 1;

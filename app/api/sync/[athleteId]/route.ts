@@ -227,6 +227,25 @@ function classifyBikeActivity(activity: any): string {
 }
 
 async function insertActivity(activity: any, athleteId: string, accessToken: string, athleteZones: any) {
+  // Fetch detailed activity data to get cadence (not included in list endpoint)
+  let detailedActivity = activity;
+  try {
+    const detailResponse = await fetch(
+      `https://www.strava.com/api/v3/activities/${activity.id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (detailResponse.ok) {
+      detailedActivity = await detailResponse.json();
+      if (detailedActivity.average_cadence) {
+        console.log(`Activity ${activity.id} cadence: ${detailedActivity.average_cadence} spm`);
+      }
+    }
+  } catch (err) {
+    console.warn(`Could not fetch detailed activity ${activity.id} for cadence:`, err);
+  }
+
   // Classify bike activities based on elevation
   const classifiedSportType = classifyBikeActivity(activity);
 
@@ -258,6 +277,7 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       moving_time_s: activity.moving_time,
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
+      average_cadence: detailedActivity.average_cadence || null,
       in_competition_window: true, // Explicitly set - activity already filtered by date range
       // For swim: 4x time multiplier; For no HR data: Zone 1 (1 pt/min); Others: will be set by trigger
       ...(isSwim ? { zone_points: swimPoints } : !hasHRData ? { zone_points: zone1FallbackPoints } : {}),
@@ -316,6 +336,22 @@ async function updateActivity(activity: any, athleteId: string, accessToken: str
 
   if (!existingActivity) return;
 
+  // Fetch detailed activity data to get cadence
+  let detailedActivity = activity;
+  try {
+    const detailResponse = await fetch(
+      `https://www.strava.com/api/v3/activities/${activity.id}`,
+      {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      }
+    );
+    if (detailResponse.ok) {
+      detailedActivity = await detailResponse.json();
+    }
+  } catch (err) {
+    console.warn(`Could not fetch detailed activity ${activity.id} for cadence:`, err);
+  }
+
   // Classify bike activities based on elevation
   const classifiedSportType = classifyBikeActivity(activity);
 
@@ -330,6 +366,7 @@ async function updateActivity(activity: any, athleteId: string, accessToken: str
       moving_time_s: activity.moving_time,
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
+      average_cadence: detailedActivity.average_cadence || null,
     })
     .eq('id', existingActivity.id);
 
