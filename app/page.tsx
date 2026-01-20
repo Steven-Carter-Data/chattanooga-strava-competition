@@ -74,6 +74,8 @@ function HomeContent() {
   const [syncingAll, setSyncingAll] = useState(false);
   const [syncAllMessage, setSyncAllMessage] = useState<string | null>(null);
   const [showAllActivities, setShowAllActivities] = useState(false);
+  const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [loadingWeek, setLoadingWeek] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -107,6 +109,26 @@ function HomeContent() {
 
     fetchData();
   }, []);
+
+  // Fetch weekly stats for a specific week
+  async function fetchWeeklyStats(weekNumber?: number) {
+    setLoadingWeek(true);
+    try {
+      const url = weekNumber !== undefined
+        ? `/api/weekly-stats?week=${weekNumber}`
+        : '/api/weekly-stats';
+      const response = await fetch(url);
+      const data = await response.json();
+      if (data.success) {
+        setWeeklyStats(data.data);
+        setSelectedWeek(data.data.week_number);
+      }
+    } catch (err) {
+      console.error('Failed to fetch weekly stats:', err);
+    } finally {
+      setLoadingWeek(false);
+    }
+  }
 
   async function handleSyncAllAthletes() {
     if (leaderboard.length === 0) return;
@@ -713,18 +735,67 @@ function HomeContent() {
         </div>
 
         {/* Weekly Performance Tracker */}
-        {!loading && weeklyStats && weeklyStats.leaderboard.length > 0 && (
+        {!loading && weeklyStats && (
           <div className="card p-4 sm:p-8 mt-8 sm:mt-10">
             <div className="mb-6 sm:mb-8">
-              <h2 className="text-xl sm:text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
-                This Week&apos;s Performance
-              </h2>
-              <div className="h-px w-24 sm:w-32 bg-gold/30 mt-2 sm:mt-3"></div>
-              <p className="text-xs sm:text-sm text-muted mt-2 sm:mt-3 font-body uppercase tracking-wider">
-                {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-              </p>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div>
+                  <h2 className="text-xl sm:text-3xl md:text-4xl font-display gradient-text tracking-wider uppercase">
+                    Weekly Performance
+                  </h2>
+                  <div className="h-px w-24 sm:w-32 bg-gold/30 mt-2 sm:mt-3"></div>
+                  <p className="text-xs sm:text-sm text-muted mt-2 sm:mt-3 font-body uppercase tracking-wider">
+                    {new Date(weeklyStats.week_start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - {new Date(weeklyStats.week_end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  </p>
+                </div>
+
+                {/* Week Selector Dropdown */}
+                {weeklyStats.available_weeks && weeklyStats.available_weeks.length > 0 && (
+                  <div className="relative">
+                    <select
+                      value={selectedWeek ?? weeklyStats.week_number}
+                      onChange={(e) => {
+                        const weekNum = parseInt(e.target.value, 10);
+                        fetchWeeklyStats(weekNum);
+                        setSelectedWeeklyAthlete(null);
+                      }}
+                      disabled={loadingWeek}
+                      className="appearance-none bg-background border border-gold/30 text-foreground font-body text-sm px-4 py-2 pr-10 uppercase tracking-wider cursor-pointer hover:border-gold/50 focus:border-gold focus:outline-none transition-colors duration-300 disabled:opacity-50"
+                    >
+                      {weeklyStats.available_weeks.slice().reverse().map((week: any) => (
+                        <option key={week.weekNumber} value={week.weekNumber}>
+                          {week.weekLabel}
+                          {week.isCurrentWeek ? ' (Current)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                      {loadingWeek ? (
+                        <svg className="animate-spin h-4 w-4 text-gold" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                      ) : (
+                        <svg className="h-4 w-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
+            {weeklyStats.leaderboard.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="diamond-frame mx-auto mb-4">
+                  <svg className="w-6 h-6 text-gold/50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                  </svg>
+                </div>
+                <p className="text-muted font-body">No activities recorded for {weeklyStats.week_label}</p>
+              </div>
+            ) : (
             <div className="space-y-3">
               <p className="text-xs sm:text-sm text-muted font-body mb-4">Click on an athlete to view their weekly stats</p>
               {weeklyStats.leaderboard.slice(0, 5).map((entry: any, index: number) => {
@@ -816,6 +887,7 @@ function HomeContent() {
                 );
               })}
             </div>
+            )}
           </div>
         )}
 

@@ -1,23 +1,148 @@
-import { NextResponse } from 'next/server';
-import { supabase } from '@/lib/supabase';
-import { getWeekStartEST, getWeekEndEST } from '@/lib/timezone';
+import { NextRequest, NextResponse } from 'next/server';
+import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
+import { getWeekStartEST, getWeekEndEST, toEasternTime } from '@/lib/timezone';
+
+/**
+ * Calculate week number and date range for a specific week
+ * Week 0 = partial week from competition start to first Sunday
+ * Week 1+ = full Monday-Sunday weeks
+ */
+function getWeekRange(weekNumber: number, competitionStart: Date): { weekStart: Date; weekEnd: Date; weekLabel: string } | null {
+  const compStartEST = toEasternTime(competitionStart);
+  const compStartDay = compStartEST.getDay();
+  const startsOnMonday = compStartDay === 1;
+
+  if (weekNumber === 0 && !startsOnMonday) {
+    // Week 0: Partial week from competition start to first Sunday
+    const weekStart = new Date(competitionStart);
+    const weekEnd = getWeekEndEST(competitionStart);
+    return { weekStart, weekEnd, weekLabel: 'Week 0' };
+  }
+
+  // For full weeks, calculate the Monday start
+  let targetWeekStart: Date;
+  if (startsOnMonday) {
+    // Competition starts on Monday, so Week 1 = competition start
+    targetWeekStart = new Date(competitionStart);
+    targetWeekStart.setDate(targetWeekStart.getDate() + (weekNumber - 1) * 7);
+  } else {
+    // Get the first Monday after competition start
+    const firstMonday = getWeekStartEST(competitionStart);
+    firstMonday.setDate(firstMonday.getDate() + 7);
+    // Then add weeks for the requested week number
+    targetWeekStart = new Date(firstMonday);
+    targetWeekStart.setDate(firstMonday.getDate() + (weekNumber - 1) * 7);
+  }
+
+  const weekEnd = getWeekEndEST(targetWeekStart);
+  return { weekStart: targetWeekStart, weekEnd, weekLabel: `Week ${weekNumber}` };
+}
+
+/**
+ * Generate list of all available weeks from competition start to now
+ */
+function getAvailableWeeks(competitionStart: Date): Array<{ weekNumber: number; weekLabel: string; weekStart: string; weekEnd: string; isCurrentWeek: boolean }> {
+  const now = new Date();
+  const compStartEST = toEasternTime(competitionStart);
+  const compStartDay = compStartEST.getDay();
+  const startsOnMonday = compStartDay === 1;
+
+  const weeks: Array<{ weekNumber: number; weekLabel: string; weekStart: string; weekEnd: string; isCurrentWeek: boolean }> = [];
+
+  // Current week boundaries for comparison
+  const currentWeekStart = getWeekStartEST(now);
+
+  // Week 0 if competition doesn't start on Monday
+  if (!startsOnMonday) {
+    const week0End = getWeekEndEST(competitionStart);
+    weeks.push({
+      weekNumber: 0,
+      weekLabel: 'Week 0',
+      weekStart: competitionStart.toISOString(),
+      weekEnd: week0End.toISOString(),
+      isCurrentWeek: currentWeekStart.getTime() === getWeekStartEST(competitionStart).getTime(),
+    });
+  }
+
+  // Full weeks
+  let weekNumber = 1;
+  let currentWeekStartDate: Date;
+
+  if (startsOnMonday) {
+    currentWeekStartDate = new Date(competitionStart);
+  } else {
+    currentWeekStartDate = getWeekStartEST(competitionStart);
+    currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
+  }
+
+  while (currentWeekStartDate <= now) {
+    const weekEnd = getWeekEndEST(currentWeekStartDate);
+    weeks.push({
+      weekNumber,
+      weekLabel: `Week ${weekNumber}`,
+      weekStart: currentWeekStartDate.toISOString(),
+      weekEnd: weekEnd.toISOString(),
+      isCurrentWeek: currentWeekStartDate.getTime() === currentWeekStart.getTime(),
+    });
+
+    currentWeekStartDate.setDate(currentWeekStartDate.getDate() + 7);
+    weekNumber++;
+  }
+
+  return weeks;
+}
 
 /**
  * GET /api/weekly-stats
- * Returns this week's performance statistics
+ * Returns weekly performance statistics
+ * Query params:
+ *   - week: specific week number (0, 1, 2...) - defaults to current week
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    // Calculate start of current week (Monday in EST)
-    const now = new Date();
-    const weekStart = getWeekStartEST(now);
+    const { searchParams } = new URL(request.url);
+    const weekParam = searchParams.get('week');
+
+    // Get competition config for start date
+    const { data: competitionConfig } = await getActiveCompetitionConfig(supabase);
+    const competitionStart = competitionConfig?.start_date
+      ? new Date(competitionConfig.start_date)
+      : new Date('2026-01-01');
+
+    // Generate list of available weeks
+    const availableWeeks = getAvailableWeeks(competitionStart);
+
+    // Determine which week to show
+    let weekStart: Date;
+    let weekEnd: Date;
+    let weekLabel: string;
+    let weekNumber: number;
+
+    if (weekParam !== null) {
+      // Specific week requested
+      weekNumber = parseInt(weekParam, 10);
+      const weekRange = getWeekRange(weekNumber, competitionStart);
+      if (!weekRange) {
+        return NextResponse.json({ error: 'Invalid week number' }, { status: 400 });
+      }
+      weekStart = weekRange.weekStart;
+      weekEnd = weekRange.weekEnd;
+      weekLabel = weekRange.weekLabel;
+    } else {
+      // Default to current week
+      const now = new Date();
+      weekStart = getWeekStartEST(now);
+      weekEnd = getWeekEndEST(now);
+
+      // Find current week number
+      const currentWeek = availableWeeks.find(w => w.isCurrentWeek);
+      weekNumber = currentWeek?.weekNumber ?? availableWeeks.length - 1;
+      weekLabel = currentWeek?.weekLabel ?? `Week ${weekNumber}`;
+    }
 
     // weekEndQuery is exclusive (for database lt query)
     const weekEndQuery = new Date(weekStart);
     weekEndQuery.setDate(weekStart.getDate() + 7);
-
-    // weekEndDisplay is inclusive (Sunday, for UI display)
-    const weekEndDisplay = getWeekEndEST(now);
 
     console.log('Week range:', weekStart.toISOString(), 'to', weekEndQuery.toISOString());
 
@@ -119,7 +244,10 @@ export async function GET() {
       success: true,
       data: {
         week_start: weekStart.toISOString(),
-        week_end: weekEndDisplay.toISOString(),
+        week_end: weekEnd.toISOString(),
+        week_label: weekLabel,
+        week_number: weekNumber,
+        available_weeks: availableWeeks,
         leaderboard: weeklyLeaderboard,
         stats: weekStats,
       },
