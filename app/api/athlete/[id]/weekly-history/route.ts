@@ -2,6 +2,31 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
 import { getWeekStartEST, getWeekEndEST, formatDateEST } from '@/lib/timezone';
 
+// Map Strava sport types to triathlon disciplines
+const sportMapping: Record<string, 'swim' | 'bike' | 'run' | 'other'> = {
+  'Swim': 'swim',
+  'Run': 'run',
+  'Ride': 'bike',
+  'VirtualRide': 'bike',
+  'Peloton': 'bike',
+  'Spinning': 'bike',
+  'MountainBikeRide': 'bike',
+  'GravelRide': 'bike',
+  'EBikeRide': 'bike',
+  'VirtualRun': 'run',
+  'TrailRun': 'run',
+  'Walk': 'other',
+  'Hike': 'other',
+  'WeightTraining': 'other',
+  'Workout': 'other',
+  'Yoga': 'other',
+  'CrossFit': 'other',
+};
+
+function getDiscipline(sportType: string): 'swim' | 'bike' | 'run' | 'other' {
+  return sportMapping[sportType] || 'other';
+}
+
 /**
  * GET /api/athlete/[id]/weekly-history
  * Returns week-over-week points history for an athlete
@@ -17,7 +42,7 @@ export async function GET(
     // Filter out hidden activities (duplicates/merged)
     const { data: activities, error: activitiesError } = await supabase
       .from('activities')
-      .select('start_date, zone_points, hidden')
+      .select('start_date, zone_points, hidden, sport_type, moving_time_s')
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
       .order('start_date', { ascending: true });
@@ -44,11 +69,18 @@ export async function GET(
     const now = new Date();
 
     // Group activities by week (Monday-Sunday in EST)
+    interface DisciplineTime {
+      swim: number;
+      bike: number;
+      run: number;
+    }
+
     const weeklyData: Map<string, {
       weekStart: Date;
       weekEnd: Date;
       points: number;
       activityCount: number;
+      trainingTime: DisciplineTime;
     }> = new Map();
 
     filteredActivities?.forEach((activity) => {
@@ -59,16 +91,27 @@ export async function GET(
         const weekEnd = getWeekEndEST(date);
         const weekKey = weekStart.toISOString().split('T')[0];
 
+        const discipline = getDiscipline(activity.sport_type || '');
+        const movingTime = activity.moving_time_s || 0;
+
         const existing = weeklyData.get(weekKey);
         if (existing) {
           existing.points += activity.zone_points;
           existing.activityCount += 1;
+          if (discipline === 'swim' || discipline === 'bike' || discipline === 'run') {
+            existing.trainingTime[discipline] += movingTime;
+          }
         } else {
+          const trainingTime: DisciplineTime = { swim: 0, bike: 0, run: 0 };
+          if (discipline === 'swim' || discipline === 'bike' || discipline === 'run') {
+            trainingTime[discipline] = movingTime;
+          }
           weeklyData.set(weekKey, {
             weekStart,
             weekEnd,
             points: activity.zone_points,
             activityCount: 1,
+            trainingTime,
           });
         }
       }
@@ -89,6 +132,7 @@ export async function GET(
       points: number;
       activityCount: number;
       cumulativePoints: number;
+      trainingTime: DisciplineTime;
     }> = [];
 
     // Competition start date (Jan 1, 2026)
@@ -121,6 +165,7 @@ export async function GET(
         points: Math.round(week0Points * 10) / 10,
         activityCount: week0Data?.activityCount || 0,
         cumulativePoints: Math.round(cumulativePoints * 10) / 10,
+        trainingTime: week0Data?.trainingTime || { swim: 0, bike: 0, run: 0 },
       });
 
       weekNumber = 1;
@@ -155,6 +200,7 @@ export async function GET(
         points: Math.round(weekPoints * 10) / 10,
         activityCount: weekData?.activityCount || 0,
         cumulativePoints: Math.round(cumulativePoints * 10) / 10,
+        trainingTime: weekData?.trainingTime || { swim: 0, bike: 0, run: 0 },
       });
 
       // Move to next week

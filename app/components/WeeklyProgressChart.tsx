@@ -2,6 +2,12 @@
 
 import { useState, useEffect } from 'react';
 
+interface DisciplineTime {
+  swim: number;
+  bike: number;
+  run: number;
+}
+
 interface WeekData {
   weekStart: string;
   weekEnd: string;
@@ -12,6 +18,7 @@ interface WeekData {
   points: number;
   activityCount: number;
   cumulativePoints: number;
+  trainingTime: DisciplineTime;
 }
 
 interface WeeklyHistoryData {
@@ -28,6 +35,16 @@ interface WeeklyHistoryData {
 
 interface WeeklyProgressChartProps {
   athleteId: string;
+}
+
+// Format seconds to hours and minutes (e.g., "2h 30m")
+function formatTime(seconds: number): string {
+  if (seconds === 0) return '0m';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
 }
 
 export default function WeeklyProgressChart({ athleteId }: WeeklyProgressChartProps) {
@@ -193,6 +210,38 @@ export default function WeeklyProgressChart({ athleteId }: WeeklyProgressChartPr
           </div>
         </div>
       </div>
+
+      {/* Current Week Training Time by Discipline */}
+      {weeks.length > 0 && (
+        <div className="mb-6">
+          <div className="text-xs text-muted font-body uppercase tracking-wider mb-3">
+            This Week&apos;s Training Time
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-background border border-blue-500/30 p-3 text-center">
+              <div className="text-2xl mb-1">🏊</div>
+              <div className="text-lg sm:text-xl font-display text-blue-400">
+                {formatTime(weeks[weeks.length - 1].trainingTime.swim)}
+              </div>
+              <div className="text-xs text-muted font-body uppercase tracking-wider">Swim</div>
+            </div>
+            <div className="bg-background border border-green-500/30 p-3 text-center">
+              <div className="text-2xl mb-1">🚴</div>
+              <div className="text-lg sm:text-xl font-display text-green-400">
+                {formatTime(weeks[weeks.length - 1].trainingTime.bike)}
+              </div>
+              <div className="text-xs text-muted font-body uppercase tracking-wider">Bike</div>
+            </div>
+            <div className="bg-background border border-orange-500/30 p-3 text-center">
+              <div className="text-2xl mb-1">🏃</div>
+              <div className="text-lg sm:text-xl font-display text-orange-400">
+                {formatTime(weeks[weeks.length - 1].trainingTime.run)}
+              </div>
+              <div className="text-xs text-muted font-body uppercase tracking-wider">Run</div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Line Chart Container */}
       <div className="relative">
@@ -373,7 +422,33 @@ export default function WeeklyProgressChart({ athleteId }: WeeklyProgressChartPr
                     <span className="text-muted ml-1">pts</span>
                   </div>
                   {viewMode === 'weekly' && (
-                    <div className="text-muted mt-0.5">{weeks[hoveredIndex].activityCount} activities</div>
+                    <>
+                      <div className="text-muted mt-0.5">{weeks[hoveredIndex].activityCount} activities</div>
+                      {(weeks[hoveredIndex].trainingTime.swim > 0 ||
+                        weeks[hoveredIndex].trainingTime.bike > 0 ||
+                        weeks[hoveredIndex].trainingTime.run > 0) && (
+                        <div className="mt-2 pt-2 border-t border-gold/20 space-y-0.5">
+                          {weeks[hoveredIndex].trainingTime.swim > 0 && (
+                            <div className="flex justify-between gap-3">
+                              <span className="text-blue-400">🏊 Swim</span>
+                              <span>{formatTime(weeks[hoveredIndex].trainingTime.swim)}</span>
+                            </div>
+                          )}
+                          {weeks[hoveredIndex].trainingTime.bike > 0 && (
+                            <div className="flex justify-between gap-3">
+                              <span className="text-green-400">🚴 Bike</span>
+                              <span>{formatTime(weeks[hoveredIndex].trainingTime.bike)}</span>
+                            </div>
+                          )}
+                          {weeks[hoveredIndex].trainingTime.run > 0 && (
+                            <div className="flex justify-between gap-3">
+                              <span className="text-orange-400">🏃 Run</span>
+                              <span>{formatTime(weeks[hoveredIndex].trainingTime.run)}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </>
                   )}
                 </div>
               </div>
