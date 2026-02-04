@@ -84,9 +84,15 @@ export async function fetchActivityZones(
 /**
  * Extract HR zone times from Strava's activity zones response
  * Returns zone times in seconds, matching Strava exactly
+ *
+ * If movingTimeSeconds is provided, will detect and correct inflated zone times
+ * caused by a Strava bug (zone times 1000-2000x higher than actual).
+ * The correction uses the fact that percentages remain correct even when
+ * absolute times are inflated.
  */
 export function extractHRZoneTimes(
-  activityZones: StravaActivityZone[]
+  activityZones: StravaActivityZone[],
+  movingTimeSeconds?: number
 ): {
   zone_1: number;
   zone_2: number;
@@ -104,13 +110,91 @@ export function extractHRZoneTimes(
 
   // distribution_buckets contains time in seconds for each zone
   // Strava returns 5 buckets for zones 1-5
-  return {
+  let zoneTimes = {
     zone_1: hrZone.distribution_buckets[0]?.time || 0,
     zone_2: hrZone.distribution_buckets[1]?.time || 0,
     zone_3: hrZone.distribution_buckets[2]?.time || 0,
     zone_4: hrZone.distribution_buckets[3]?.time || 0,
     zone_5: hrZone.distribution_buckets[4]?.time || 0,
   };
+
+  // Check for and correct inflated zone times (Strava bug)
+  if (movingTimeSeconds && movingTimeSeconds > 0) {
+    zoneTimes = correctInflatedZoneTimes(zoneTimes, movingTimeSeconds);
+  }
+
+  return zoneTimes;
+}
+
+/**
+ * Detect and correct inflated HR zone times caused by Strava bug.
+ *
+ * The bug causes zone times to be inflated by ~1000-2000x, but the
+ * PERCENTAGES remain correct. This function:
+ * 1. Detects if total zone time significantly exceeds moving time (ratio > 1.5)
+ * 2. If inflated, recalculates zone times using: moving_time × (zone_time / total_zone_time)
+ *
+ * Example:
+ * - Moving time: 2700s (45 min)
+ * - Strava returns: z2=3537037s, z3=109393s (total=3646430s, ratio=1350x)
+ * - Percentages: z2=97.0%, z3=3.0% (correct!)
+ * - Corrected: z2=2700×0.97=2619s, z3=2700×0.03=81s
+ */
+export function correctInflatedZoneTimes(
+  zoneTimes: {
+    zone_1: number;
+    zone_2: number;
+    zone_3: number;
+    zone_4: number;
+    zone_5: number;
+  },
+  movingTimeSeconds: number
+): {
+  zone_1: number;
+  zone_2: number;
+  zone_3: number;
+  zone_4: number;
+  zone_5: number;
+} {
+  const totalZoneTime =
+    zoneTimes.zone_1 +
+    zoneTimes.zone_2 +
+    zoneTimes.zone_3 +
+    zoneTimes.zone_4 +
+    zoneTimes.zone_5;
+
+  // If no zone time, return as-is
+  if (totalZoneTime === 0) {
+    return zoneTimes;
+  }
+
+  // Calculate ratio of zone time to moving time
+  const ratio = totalZoneTime / movingTimeSeconds;
+
+  // If ratio > 1.5, zone times are likely inflated (Strava bug)
+  // Normal activities should have ratio close to 1.0 (zone time ≈ moving time)
+  const INFLATION_THRESHOLD = 1.5;
+
+  if (ratio > INFLATION_THRESHOLD) {
+    console.warn(
+      `Detected inflated zone times (ratio: ${ratio.toFixed(2)}x). ` +
+      `Total zone time: ${totalZoneTime}s, Moving time: ${movingTimeSeconds}s. ` +
+      `Applying percentage-based correction.`
+    );
+
+    // Recalculate each zone using percentages
+    // corrected_zone = moving_time × (zone_time / total_zone_time)
+    return {
+      zone_1: Math.round(movingTimeSeconds * (zoneTimes.zone_1 / totalZoneTime)),
+      zone_2: Math.round(movingTimeSeconds * (zoneTimes.zone_2 / totalZoneTime)),
+      zone_3: Math.round(movingTimeSeconds * (zoneTimes.zone_3 / totalZoneTime)),
+      zone_4: Math.round(movingTimeSeconds * (zoneTimes.zone_4 / totalZoneTime)),
+      zone_5: Math.round(movingTimeSeconds * (zoneTimes.zone_5 / totalZoneTime)),
+    };
+  }
+
+  // Zone times appear normal, return as-is
+  return zoneTimes;
 }
 
 /**
