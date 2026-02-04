@@ -7,6 +7,13 @@ import { fetchAthleteZones, fetchActivityZones, extractHRZoneTimes } from '@/lib
 // These activities will not be synced or count toward points
 const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki'];
 
+// Specific Strava activity IDs to exclude (e.g., watch malfunctions, bad data)
+// These activities will be skipped during sync even if they exist in Strava
+const EXCLUDED_STRAVA_ACTIVITY_IDS: number[] = [
+  17285332190, // Matt Piunti - watch malfunction swim 1
+  17285088903, // Matt Piunti - watch malfunction swim 2
+];
+
 /**
  * POST /api/sync/[athleteId]
  * Manually sync activities for a specific athlete from Strava
@@ -132,6 +139,13 @@ export async function POST(
         // Filter out excluded activity types (e.g., Walk)
         if (EXCLUDED_ACTIVITY_TYPES.includes(activityType)) {
           console.log(`Skipping activity ${activity.id} - excluded type: ${activityType}`);
+          skippedCount++;
+          continue;
+        }
+
+        // Filter out specific excluded activity IDs (e.g., watch malfunctions)
+        if (EXCLUDED_STRAVA_ACTIVITY_IDS.includes(activity.id)) {
+          console.log(`Skipping activity ${activity.id} - in exclusion list (bad data)`);
           skippedCount++;
           continue;
         }
@@ -302,7 +316,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   const activityZones = await fetchActivityZones(activity.id, accessToken);
 
   if (activityZones) {
-    const zones = extractHRZoneTimes(activityZones);
+    // Pass moving_time to detect and correct inflated zone times (Strava bug)
+    const zones = extractHRZoneTimes(activityZones, activity.moving_time);
 
     if (zones) {
       console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, zones);
@@ -374,7 +389,8 @@ async function updateActivity(activity: any, athleteId: string, accessToken: str
   const activityZones = await fetchActivityZones(activity.id, accessToken);
 
   if (activityZones) {
-    const zones = extractHRZoneTimes(activityZones);
+    // Pass moving_time to detect and correct inflated zone times (Strava bug)
+    const zones = extractHRZoneTimes(activityZones, activity.moving_time);
 
     if (zones) {
       console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, zones);

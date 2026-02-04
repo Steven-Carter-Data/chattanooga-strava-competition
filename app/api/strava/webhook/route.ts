@@ -11,6 +11,13 @@ import { StravaWebhookEvent } from '@/lib/types';
 // These activities will not be synced or count toward points
 const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki'];
 
+// Specific Strava activity IDs to exclude (e.g., watch malfunctions, bad data)
+// These activities will be skipped during webhook processing
+const EXCLUDED_STRAVA_ACTIVITY_IDS: number[] = [
+  17285332190, // Matt Piunti - watch malfunction swim 1
+  17285088903, // Matt Piunti - watch malfunction swim 2
+];
+
 /**
  * GET handler for Strava webhook verification
  * Strava sends a GET request with hub.mode, hub.challenge, and hub.verify_token
@@ -115,6 +122,12 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   const { object_id: activityId, owner_id: athleteId } = event;
 
   console.log(`Processing activity ${activityId} for athlete ${athleteId}`);
+
+  // Check if this activity ID is in the exclusion list (e.g., watch malfunctions)
+  if (EXCLUDED_STRAVA_ACTIVITY_IDS.includes(activityId)) {
+    console.log(`Skipping activity ${activityId} - in exclusion list (bad data)`);
+    return;
+  }
 
   // Get athlete's access token
   const accessToken = await getAthleteAccessToken(athleteId);
@@ -252,7 +265,8 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
   const activityZones = await fetchActivityZones(activityId, accessToken);
 
   if (activityZones) {
-    const zones = extractHRZoneTimes(activityZones);
+    // Pass moving_time to detect and correct inflated zone times (Strava bug)
+    const zones = extractHRZoneTimes(activityZones, activity.moving_time);
 
     if (zones) {
       console.log(`Fetched zones directly from Strava for activity ${activityId}:`, zones);
