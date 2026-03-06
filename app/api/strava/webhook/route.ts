@@ -9,13 +9,15 @@ import { StravaWebhookEvent } from '@/lib/types';
 
 // Activity types excluded from the competition
 // These activities will not be synced or count toward points
-const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki'];
+const EXCLUDED_ACTIVITY_TYPES = ['Walk', 'AlpineSki', 'Golf'];
 
 // Specific Strava activity IDs to exclude (e.g., watch malfunctions, bad data)
 // These activities will be skipped during webhook processing
 const EXCLUDED_STRAVA_ACTIVITY_IDS: number[] = [
   17285332190, // Matt Piunti - watch malfunction swim 1
   17285088903, // Matt Piunti - watch malfunction swim 2
+  17398044743, // Golf activity - excluded activity type
+  17441898611, // Manual correction - watch not started for first 8 min of run
 ];
 
 /**

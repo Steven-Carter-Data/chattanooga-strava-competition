@@ -76,6 +76,9 @@ function HomeContent() {
   const [showAllActivities, setShowAllActivities] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [loadingWeek, setLoadingWeek] = useState(false);
+  const [showAdjusted, setShowAdjusted] = useState(false);
+  const [adjustedLeaderboard, setAdjustedLeaderboard] = useState<any[] | null>(null);
+  const [loadingAdjusted, setLoadingAdjusted] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -130,6 +133,23 @@ function HomeContent() {
     }
   }
 
+  async function handleToggleAdjusted() {
+    const next = !showAdjusted;
+    setShowAdjusted(next);
+    if (next && !adjustedLeaderboard) {
+      setLoadingAdjusted(true);
+      try {
+        const res = await fetch('/api/leaderboard/adjusted');
+        const data = await res.json();
+        if (data.success) setAdjustedLeaderboard(data.data);
+      } catch (err) {
+        console.error('Failed to fetch adjusted leaderboard:', err);
+      } finally {
+        setLoadingAdjusted(false);
+      }
+    }
+  }
+
   async function handleSyncAllAthletes() {
     if (leaderboard.length === 0) return;
 
@@ -165,6 +185,7 @@ function HomeContent() {
     }
 
     // Refresh data
+    setAdjustedLeaderboard(null); // Invalidate adjusted cache
     const leaderboardResponse = await fetch('/api/leaderboard');
     const leaderboardData = await leaderboardResponse.json();
     if (leaderboardData.success) {
@@ -497,6 +518,19 @@ function HomeContent() {
                 Leaderboard
               </h2>
               <div className="h-px w-24 bg-gold/30 mt-2 sm:mt-3"></div>
+              {!loading && leaderboard.length > 0 && (
+                <button
+                  onClick={handleToggleAdjusted}
+                  className={`mt-2 flex items-center gap-2 text-xs font-body uppercase tracking-wider transition-colors duration-300 ${
+                    showAdjusted ? 'text-gold' : 'text-muted hover:text-gold/70'
+                  }`}
+                >
+                  <div className={`relative w-8 h-4 rounded-full transition-colors duration-300 ${showAdjusted ? 'bg-gold/30' : 'bg-muted/20'}`}>
+                    <div className={`absolute top-0.5 w-3 h-3 rounded-full transition-all duration-300 ${showAdjusted ? 'left-4 bg-gold' : 'left-0.5 bg-muted/50'}`}></div>
+                  </div>
+                  Drop 2 Lowest Weeks
+                </button>
+              )}
             </div>
             {!loading && leaderboard.length > 0 && (
               <div className="flex items-center gap-2 sm:gap-4">
@@ -552,7 +586,196 @@ function HomeContent() {
             </div>
           )}
 
-          {loading ? (
+          {showAdjusted ? (
+            loadingAdjusted ? (
+              <div className="text-center py-16">
+                <div className="diamond-frame mx-auto animate-gold-pulse">
+                  <div className="w-6 h-6 border-2 border-gold border-t-transparent animate-spin"></div>
+                </div>
+                <p className="mt-6 text-muted font-body tracking-wide">Calculating adjusted standings...</p>
+              </div>
+            ) : adjustedLeaderboard ? (
+              <>
+                <div className="mb-4 p-3 bg-background border border-gold/20 text-xs text-muted font-body">
+                  Each athlete&apos;s 2 lowest-scoring full weeks are dropped (Week 0 excluded).
+                </div>
+                {/* Mobile adjusted layout */}
+                <div className="md:hidden space-y-4">
+                  {adjustedLeaderboard.map((entry: any, index: number) => {
+                    const leaderPoints = adjustedLeaderboard[0]?.adjusted_points || 0;
+                    const pointsBehind = leaderPoints - entry.adjusted_points;
+
+                    return (
+                      <div
+                        key={entry.athlete_id}
+                        className="bg-background border border-gold/20 p-4 hover:border-gold/40 transition-all duration-300"
+                      >
+                        <div className="flex items-start justify-between mb-3">
+                          <div className="flex items-center gap-3">
+                            {index < 3 ? (
+                              <div className={`w-8 h-8 flex items-center justify-center border-2 rotate-45 flex-shrink-0 ${
+                                index === 0 ? 'border-gold bg-gold/10' :
+                                index === 1 ? 'border-muted bg-muted/10' :
+                                'border-orange-700 bg-orange-700/10'
+                              }`}>
+                                <span className={`-rotate-45 font-display text-sm ${
+                                  index === 0 ? 'text-gold' :
+                                  index === 1 ? 'text-muted' :
+                                  'text-orange-700'
+                                }`}>
+                                  {toRoman(index + 1)}
+                                </span>
+                              </div>
+                            ) : (
+                              <span className="font-display text-lg text-muted w-8 text-center flex-shrink-0">
+                                {toRoman(index + 1)}
+                              </span>
+                            )}
+                            <Link
+                              href={`/athlete/${entry.athlete_id}`}
+                              className="ripple-link-animated font-body font-semibold text-foreground hover:text-gold transition-colors duration-300"
+                              title="View Bourbon Chaser Athlete Profile"
+                            >
+                              <span className="ripple-ring"></span>
+                              <span className="ripple-ring"></span>
+                              <span className="ripple-ring"></span>
+                              {entry.firstname} {entry.lastname}
+                            </Link>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-2xl font-display gradient-text">
+                              {entry.adjusted_points.toFixed(1)}
+                            </div>
+                            <div className="text-xs text-muted font-body uppercase tracking-wider">adj. pts</div>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-gold/10">
+                          <div className="flex gap-4 text-sm">
+                            <div className="text-muted/60 font-body">
+                              <span className="line-through">{entry.total_points.toFixed(1)}</span>
+                              <span className="ml-1 text-red-400">-{entry.dropped_points.toFixed(1)}</span>
+                            </div>
+                            {index > 0 && (
+                              <div className="text-orange-500 font-body">
+                                -{pointsBehind.toFixed(1)} behind
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        {entry.dropped_weeks.length > 0 && (
+                          <div className="mt-2 pt-2 border-t border-gold/10">
+                            <div className="text-xs text-muted/50 font-body">
+                              Dropped: {entry.dropped_weeks.map((w: any) =>
+                                `Wk ${w.week} (${w.points.toFixed(1)} pts)`
+                              ).join(', ')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop adjusted table */}
+                <div className="hidden md:block overflow-x-auto -mx-8">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-gold/30">
+                        <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Rank</th>
+                        <th className="text-left py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Athlete</th>
+                        <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Adj. Points</th>
+                        <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Behind</th>
+                        <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Dropped</th>
+                        <th className="text-right py-4 px-8 font-display text-gold uppercase text-xs tracking-widest">Weeks Dropped</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {adjustedLeaderboard.map((entry: any, index: number) => {
+                        const leaderPoints = adjustedLeaderboard[0]?.adjusted_points || 0;
+                        const pointsBehind = leaderPoints - entry.adjusted_points;
+
+                        return (
+                          <tr
+                            key={entry.athlete_id}
+                            className="border-b border-gold/10 hover:bg-gold/5 transition-colors duration-300"
+                          >
+                            <td className="py-5 px-8">
+                              <div className="flex items-center">
+                                {index < 3 ? (
+                                  <div className={`w-10 h-10 flex items-center justify-center border-2 rotate-45 ${
+                                    index === 0 ? 'border-gold bg-gold/10' :
+                                    index === 1 ? 'border-muted bg-muted/10' :
+                                    'border-orange-700 bg-orange-700/10'
+                                  }`}>
+                                    <span className={`-rotate-45 font-display text-lg ${
+                                      index === 0 ? 'text-gold' :
+                                      index === 1 ? 'text-muted' :
+                                      'text-orange-700'
+                                    }`}>
+                                      {toRoman(index + 1)}
+                                    </span>
+                                  </div>
+                                ) : (
+                                  <span className="font-display text-xl text-muted w-10 text-center">
+                                    {toRoman(index + 1)}
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-5 px-8">
+                              <Link
+                                href={`/athlete/${entry.athlete_id}`}
+                                className="ripple-link-animated font-body font-semibold text-foreground text-lg hover:text-gold transition-colors duration-300 tracking-wide"
+                                title="View Bourbon Chaser Athlete Profile"
+                              >
+                                <span className="ripple-ring"></span>
+                                <span className="ripple-ring"></span>
+                                <span className="ripple-ring"></span>
+                                {entry.firstname} {entry.lastname}
+                              </Link>
+                            </td>
+                            <td className="py-5 px-8 text-right">
+                              <div className="text-3xl font-display gradient-text">
+                                {entry.adjusted_points.toFixed(1)}
+                              </div>
+                              <div className="text-xs text-muted/50 font-body line-through">
+                                {entry.total_points.toFixed(1)}
+                              </div>
+                            </td>
+                            <td className="py-5 px-8 text-right">
+                              {index === 0 ? (
+                                <div className="text-muted font-display">&mdash;</div>
+                              ) : (
+                                <div className="text-lg font-body text-orange-500">
+                                  -{pointsBehind.toFixed(1)}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-5 px-8 text-right">
+                              <div className="text-lg font-body text-red-400">
+                                -{entry.dropped_points.toFixed(1)}
+                              </div>
+                            </td>
+                            <td className="py-5 px-8 text-right">
+                              <div className="text-sm font-body text-muted">
+                                {entry.dropped_weeks.length > 0
+                                  ? entry.dropped_weeks.map((w: any) =>
+                                      `Wk ${w.week} (${w.points.toFixed(1)})`
+                                    ).join(', ')
+                                  : 'None'}
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : null
+          ) : loading ? (
             <div className="text-center py-16">
               <div className="diamond-frame mx-auto animate-gold-pulse">
                 <div className="w-6 h-6 border-2 border-gold border-t-transparent animate-spin"></div>

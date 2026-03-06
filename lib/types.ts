@@ -1,4 +1,4 @@
-// Database types based on schema_draft.sql
+// Database types based on sql/schema_draft.sql
 
 export interface Athlete {
   id: string;
