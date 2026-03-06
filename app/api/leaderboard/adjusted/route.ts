@@ -79,15 +79,20 @@ export async function GET() {
     // Determine current week number so we can exclude it (still in progress)
     const currentWeekNum = getWeekNumber(new Date().toISOString());
 
+    // Build list of all completed full weeks (1 through currentWeekNum-1)
+    const allCompletedWeeks: number[] = [];
+    for (let w = 1; w < currentWeekNum; w++) {
+      allCompletedWeeks.push(w);
+    }
+
     // For each athlete, find 2 lowest completed weeks (exclude week 0 and current week)
     const leaderboard = (allAthletes || []).map((athlete: any) => {
       const weeks = athleteWeeks[athlete.id] || {};
       const totals = athleteTotals[athlete.id] || { points: 0, count: 0 };
 
-      // Get all completed full weeks (week >= 1, not current week)
-      const fullWeeks = Object.entries(weeks)
-        .filter(([wk]) => parseInt(wk) >= 1 && parseInt(wk) !== currentWeekNum)
-        .map(([wk, pts]) => ({ week: parseInt(wk), points: pts }))
+      // Include ALL completed weeks, defaulting to 0 points for weeks with no activity
+      const fullWeeks = allCompletedWeeks
+        .map(w => ({ week: w, points: weeks[w] || 0 }))
         .sort((a, b) => a.points - b.points);
 
       // Drop up to 2 lowest weeks
