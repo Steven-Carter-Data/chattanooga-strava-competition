@@ -510,6 +510,22 @@ function HomeContent() {
           )}
         </div>
 
+        {/* Swim Cap Banner */}
+        <div className="card p-4 sm:p-5 border border-cyan-500/30 bg-cyan-950/20">
+          <div className="flex items-start gap-3">
+            <span className="text-xl sm:text-2xl flex-shrink-0">🏊</span>
+            <div>
+              <h3 className="text-sm sm:text-base font-display text-cyan-400 uppercase tracking-wider mb-1">
+                Swim Cap Rule — Last 4 Weeks
+              </h3>
+              <p className="text-xs sm:text-sm text-muted leading-relaxed">
+                Starting <span className="text-foreground font-medium">Week 14 (Apr 6)</span>, the 4× swim multiplier is capped at <span className="text-foreground font-medium">3 hours per week</span>.
+                Any swim time beyond 3 hours will be scored using heart rate zones, just like a normal activity.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Leaderboard */}
         <div className="card p-4 sm:p-8">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 gap-2">

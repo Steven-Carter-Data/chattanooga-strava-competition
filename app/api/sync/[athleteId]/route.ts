@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import { getAthleteAccessToken } from '@/lib/strava';
 import { fetchAthleteZones, fetchActivityZones, extractHRZoneTimes } from '@/lib/strava-zones';
+import {
+  getActivityWeekNumber,
+  isSwimCapWeek,
+  getWeekDateRange,
+  calculateCappedSwimPoints,
+} from '@/lib/swim-cap';
 
 // Activity types excluded from the competition
 // These activities will not be synced or count toward points
@@ -175,7 +181,7 @@ export async function POST(
         } else {
           // New activity, insert it
           console.log(`Inserting new activity: ${activity.id} - ${activity.name}`);
-          await insertActivity(activity, athlete.id, accessToken, athleteZones);
+          await insertActivity(activity, athlete.id, accessToken, athleteZones, competitionStartDate, competitionEndDate);
           newCount++;
         }
       } catch (error) {
@@ -242,7 +248,7 @@ function classifyBikeActivity(activity: any): string {
   return sportType;
 }
 
-async function insertActivity(activity: any, athleteId: string, accessToken: string, athleteZones: any) {
+async function insertActivity(activity: any, athleteId: string, accessToken: string, athleteZones: any, competitionStart: Date, competitionEnd: Date) {
   // Fetch detailed activity data to get cadence (not included in list endpoint)
   let detailedActivity = activity;
   try {
@@ -268,19 +274,64 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   // Check if this is a swim activity - uses special 4x time multiplier scoring
   const isSwim = classifiedSportType === 'Swim';
 
-  // Calculate swim points using 4x time multiplier (moving_time in minutes * 4), rounded to whole number
-  const swimPoints = isSwim ? Math.round(((activity.moving_time || 0) / 60) * 4) : 0;
-
   // Calculate Zone 1 fallback points (1 point per minute) for activities without HR data
   const zone1FallbackPoints = (activity.moving_time || 0) / 60;
 
   // Determine if activity has HR data (will be used to decide final points)
   const hasHRData = activity.average_heartrate != null || activity.max_heartrate != null;
 
-  // Insert activity (with zone_points pre-set for swim activities or Zone 1 fallback for no HR data)
-  // Note: in_competition_window is set explicitly to true since the sync endpoint
-  // already filters activities to only those within the competition date range.
-  // This prevents issues with the database trigger inconsistently setting this flag.
+  // Fetch activity zones from Strava API (needed for HR zone scoring and swim cap overflow)
+  const activityZones = await fetchActivityZones(activity.id, accessToken);
+  let hrZones: { zone_1: number; zone_2: number; zone_3: number; zone_4: number; zone_5: number } | null = null;
+
+  if (activityZones) {
+    hrZones = extractHRZoneTimes(activityZones, activity.moving_time);
+    if (hrZones) {
+      console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, hrZones);
+    }
+  }
+
+  // Calculate swim points (with weekly cap logic for last 4 weeks)
+  let zonePoints: number | undefined;
+  if (isSwim) {
+    const movingTimeS = activity.moving_time || 0;
+    const activityDate = new Date(activity.start_date);
+    const weekNum = getActivityWeekNumber(activityDate, competitionStart);
+    const useSwimCap = isSwimCapWeek(weekNum, competitionStart, competitionEnd);
+
+    if (useSwimCap) {
+      // Get prior swim time for this athlete this week
+      const { weekStart } = getWeekDateRange(weekNum, competitionStart);
+      const weekEndQuery = new Date(weekStart);
+      weekEndQuery.setDate(weekStart.getDate() + 7);
+
+      const { data: priorSwims } = await supabaseAdmin
+        .from('activities')
+        .select('moving_time_s, strava_activity_id')
+        .eq('athlete_id', athleteId)
+        .eq('sport_type', 'Swim')
+        .eq('in_competition_window', true)
+        .neq('strava_activity_id', activity.id)
+        .gte('start_date', weekStart.toISOString())
+        .lt('start_date', weekEndQuery.toISOString());
+
+      const priorSwimTimeS = (priorSwims || [])
+        .filter((s: any) => s.hidden !== true)
+        .reduce((sum: number, s: any) => sum + (s.moving_time_s || 0), 0);
+
+      zonePoints = calculateCappedSwimPoints(movingTimeS, priorSwimTimeS, hrZones);
+      console.log(`Swim cap week ${weekNum}: prior swim time ${(priorSwimTimeS / 60).toFixed(1)}min, this swim ${(movingTimeS / 60).toFixed(1)}min, points=${zonePoints}`);
+    } else {
+      // Standard 4x multiplier (no cap)
+      zonePoints = Math.round((movingTimeS / 60) * 4);
+      console.log(`Swim activity ${activity.id}: ${(movingTimeS / 60).toFixed(1)} min × 4 = ${zonePoints} points`);
+    }
+  } else if (!hasHRData) {
+    zonePoints = Math.round(zone1FallbackPoints * 100) / 100;
+    console.log(`Activity ${activity.id} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${(activity.moving_time / 60).toFixed(1)} min × 1)`);
+  }
+
+  // Insert activity
   const { data: newActivity, error: activityError } = await supabaseAdmin
     .from('activities')
     .insert({
@@ -294,9 +345,8 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       average_heartrate: activity.average_heartrate,
       max_heartrate: activity.max_heartrate,
       average_cadence: detailedActivity.average_cadence || null,
-      in_competition_window: true, // Explicitly set - activity already filtered by date range
-      // For swim: 4x time multiplier; For no HR data: Zone 1 (1 pt/min); Others: will be set by trigger
-      ...(isSwim ? { zone_points: swimPoints } : !hasHRData ? { zone_points: zone1FallbackPoints } : {}),
+      in_competition_window: true,
+      ...(zonePoints !== undefined ? { zone_points: zonePoints } : {}),
     })
     .select()
     .single();
@@ -305,41 +355,20 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     throw new Error(`Failed to insert activity: ${activityError?.message}`);
   }
 
-  // Log swim activity points (calculated from time, not HR zones)
-  if (isSwim) {
-    console.log(`Swim activity ${activity.id}: ${activity.moving_time / 60} min × 4 = ${swimPoints} points`);
-    // Continue to fetch HR zone data for display purposes (if available)
-  } else if (!hasHRData) {
-    console.log(`Activity ${activity.id} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${activity.moving_time / 60} min × 1)`);
-  }
-
-  // Fetch activity zones directly from Strava API
-  // This returns the EXACT zone distribution that Strava displays, no calculation needed
-  const activityZones = await fetchActivityZones(activity.id, accessToken);
-
-  if (activityZones) {
-    // Pass moving_time to detect and correct inflated zone times (Strava bug)
-    const zones = extractHRZoneTimes(activityZones, activity.moving_time);
-
-    if (zones) {
-      console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, zones);
-
-      // Insert HR zones (for display purposes - swim points are NOT recalculated from this)
-      await supabaseAdmin
-        .from('heart_rate_zones')
-        .insert({
-          activity_id: newActivity.id,
-          zone_1_time_s: zones.zone_1,
-          zone_2_time_s: zones.zone_2,
-          zone_3_time_s: zones.zone_3,
-          zone_4_time_s: zones.zone_4,
-          zone_5_time_s: zones.zone_5,
-        });
-    } else {
-      console.log(`Activity ${activity.id}: No HR zone distribution in Strava response`);
-    }
+  // Store HR zone data
+  if (hrZones) {
+    await supabaseAdmin
+      .from('heart_rate_zones')
+      .insert({
+        activity_id: newActivity.id,
+        zone_1_time_s: hrZones.zone_1,
+        zone_2_time_s: hrZones.zone_2,
+        zone_3_time_s: hrZones.zone_3,
+        zone_4_time_s: hrZones.zone_4,
+        zone_5_time_s: hrZones.zone_5,
+      });
   } else {
-    console.log(`Activity ${activity.id}: Could not fetch activity zones from Strava`);
+    console.log(`Activity ${activity.id}: No HR zone data available from Strava`);
   }
 }
 
