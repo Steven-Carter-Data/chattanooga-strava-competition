@@ -28,10 +28,12 @@ export async function GET() {
     let activitiesError: any = null;
 
     // First try with hidden filter
+    // Use .range() to avoid Supabase's default 1000-row limit
     const resultWithHidden = await supabase
       .from('activities')
       .select('athlete_id, zone_points, hidden')
-      .eq('in_competition_window', true);
+      .eq('in_competition_window', true)
+      .range(0, 9999);
 
     if (resultWithHidden.error) {
       console.error('Error fetching activities:', resultWithHidden.error);
@@ -39,7 +41,8 @@ export async function GET() {
       const resultWithoutHidden = await supabase
         .from('activities')
         .select('athlete_id, zone_points')
-        .eq('in_competition_window', true);
+        .eq('in_competition_window', true)
+        .range(0, 9999);
 
       activities = resultWithoutHidden.data;
       activitiesError = resultWithoutHidden.error;
