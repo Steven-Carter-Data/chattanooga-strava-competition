@@ -42,7 +42,8 @@ export async function GET() {
     const { data: rawActivities, error: activitiesError } = await supabase
       .from('activities')
       .select('athlete_id, zone_points, start_date, hidden')
-      .eq('in_competition_window', true);
+      .eq('in_competition_window', true)
+      .range(0, 9999);
 
     if (activitiesError) {
       return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
