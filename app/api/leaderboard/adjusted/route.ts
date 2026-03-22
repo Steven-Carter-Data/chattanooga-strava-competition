@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
+import { fetchAllActivities } from '@/lib/fetch-all';
 import { toEasternTime, getWeekStartEST } from '@/lib/timezone';
 
 /**
@@ -38,18 +39,14 @@ export async function GET() {
       return NextResponse.json({ error: 'Failed to fetch athletes' }, { status: 500 });
     }
 
-    // Get all competition activities with start_date
-    const { data: rawActivities, error: activitiesError } = await supabase
-      .from('activities')
-      .select('athlete_id, zone_points, start_date, hidden')
-      .eq('in_competition_window', true)
-      .range(0, 9999);
+    // Get all competition activities with start_date (paginated to avoid 1000-row limit)
+    const rawActivities = await fetchAllActivities(
+      supabase,
+      'athlete_id, zone_points, start_date, hidden',
+      { in_competition_window: true }
+    );
 
-    if (activitiesError) {
-      return NextResponse.json({ error: 'Failed to fetch activities' }, { status: 500 });
-    }
-
-    const activities = (rawActivities || []).filter((a: any) => a.hidden !== true);
+    const activities = rawActivities.filter((a: any) => a.hidden !== true);
 
     // Group activities by athlete -> week number
     // Week number is calculated from week1Start

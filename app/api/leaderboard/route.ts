@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabase';
+import { fetchAllActivities } from '@/lib/fetch-all';
 import { LeaderboardEntry } from '@/lib/types';
 
 /**
@@ -22,45 +23,19 @@ export async function GET() {
       );
     }
 
-    // Get all activities in competition window
-    // Try with hidden filter first, fall back to without if column doesn't exist
-    let activities: any[] | null = null;
-    let activitiesError: any = null;
+    // Get all activities in competition window (paginated to avoid 1000-row limit)
+    const activities = await fetchAllActivities(
+      supabase,
+      'athlete_id, zone_points, hidden',
+      { in_competition_window: true }
+    );
 
-    // First try with hidden filter
-    // Use .range() to avoid Supabase's default 1000-row limit
-    const resultWithHidden = await supabase
-      .from('activities')
-      .select('athlete_id, zone_points, hidden')
-      .eq('in_competition_window', true)
-      .range(0, 9999);
-
-    if (resultWithHidden.error) {
-      console.error('Error fetching activities:', resultWithHidden.error);
-      // If error mentions hidden column, try without it
-      const resultWithoutHidden = await supabase
-        .from('activities')
-        .select('athlete_id, zone_points')
-        .eq('in_competition_window', true)
-        .range(0, 9999);
-
-      activities = resultWithoutHidden.data;
-      activitiesError = resultWithoutHidden.error;
-    } else {
-      // Filter out hidden activities in code (handles NULL, false, and missing column)
-      activities = (resultWithHidden.data || []).filter(
-        (a: any) => a.hidden !== true
-      );
-    }
-
-    if (activitiesError) {
-      console.error('Error fetching activities:', activitiesError);
-      // Continue with empty activities if error
-    }
+    // Filter out hidden activities
+    const visibleActivities = activities.filter((a: any) => a.hidden !== true);
 
     // Build a map of athlete points from activities
     const athletePointsMap: Record<string, { points: number; count: number }> = {};
-    (activities || []).forEach((activity: any) => {
+    visibleActivities.forEach((activity: any) => {
       const athleteId = activity.athlete_id;
       const points = parseFloat(activity.zone_points) || 0;
 
