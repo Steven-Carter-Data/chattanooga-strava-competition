@@ -20,6 +20,7 @@ const EXCLUDED_STRAVA_ACTIVITY_IDS: number[] = [
   17285088903, // Matt Piunti - watch malfunction swim 2
   17398044743, // Golf activity - excluded activity type
   17441898611, // Manual correction - watch not started for first 8 min of run
+  17997953649, // ROUVY ride - removed per user request
 ];
 
 /**
