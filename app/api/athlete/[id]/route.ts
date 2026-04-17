@@ -46,6 +46,7 @@ export async function GET(
         average_speed_mps,
         total_elevation_gain_m,
         zone_points,
+        corrected_zone_points,
         in_competition_window,
         exclude_from_pace_analysis,
         hidden,
@@ -69,7 +70,7 @@ export async function GET(
     }
 
     // Calculate stats
-    const totalPoints = activities?.reduce((sum, a) => sum + (a.zone_points || 0), 0) || 0;
+    const totalPoints = activities?.reduce((sum, a) => sum + ((a.corrected_zone_points ?? a.zone_points) || 0), 0) || 0;
     const activityCount = activities?.length || 0;
 
     // Group by sport type
@@ -84,7 +85,7 @@ export async function GET(
         };
       }
       acc[sport].count += 1;
-      acc[sport].points += activity.zone_points || 0;
+      acc[sport].points += (activity.corrected_zone_points ?? activity.zone_points) || 0;
       acc[sport].distance_m += activity.distance_m || 0;
       acc[sport].time_s += activity.moving_time_s || 0;
       return acc;
@@ -98,7 +99,7 @@ export async function GET(
         const weekStart = getWeekStartEST(date);
         const weekKey = weekStart.toISOString().split('T')[0];
 
-        weeklyStats[weekKey] = (weeklyStats[weekKey] || 0) + (activity.zone_points || 0);
+        weeklyStats[weekKey] = (weeklyStats[weekKey] || 0) + ((activity.corrected_zone_points ?? activity.zone_points) || 0);
       }
     });
 

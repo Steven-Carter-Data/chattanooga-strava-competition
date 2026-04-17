@@ -22,6 +22,7 @@ export async function GET() {
         distance_m,
         moving_time_s,
         zone_points,
+        corrected_zone_points,
         in_competition_window,
         hidden,
         athletes (
@@ -71,7 +72,7 @@ export async function GET() {
         start_date: activity.start_date,
         distance_m: activity.distance_m,
         moving_time_s: activity.moving_time_s,
-        zone_points: activity.zone_points,
+        zone_points: activity.corrected_zone_points ?? activity.zone_points,
         zone_1_time_s: hrZones?.zone_1_time_s || 0,
         zone_2_time_s: hrZones?.zone_2_time_s || 0,
         zone_3_time_s: hrZones?.zone_3_time_s || 0,

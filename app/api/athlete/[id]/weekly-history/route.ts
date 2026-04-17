@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabase, getActiveCompetitionConfig } from '@/lib/supabase';
-import { getWeekStartEST, getWeekEndEST, formatDateEST } from '@/lib/timezone';
+import { toEasternTime, getWeekStartEST, getWeekEndEST, formatDateEST } from '@/lib/timezone';
 
 // Map Strava sport types to triathlon disciplines
 const sportMapping: Record<string, 'swim' | 'bike' | 'run' | 'other'> = {
@@ -42,7 +42,7 @@ export async function GET(
     // Filter out hidden activities (duplicates/merged)
     const { data: activities, error: activitiesError } = await supabase
       .from('activities')
-      .select('start_date, zone_points, hidden, sport_type, moving_time_s')
+      .select('start_date, zone_points, corrected_zone_points, hidden, sport_type, moving_time_s')
       .eq('athlete_id', athleteId)
       .eq('in_competition_window', true)
       .order('start_date', { ascending: true });
@@ -66,7 +66,7 @@ export async function GET(
       ? new Date(competitionConfig.start_date)
       : new Date('2025-11-16'); // Pre-season start
 
-    const now = new Date();
+    const now = toEasternTime(new Date());
 
     // Group activities by week (Monday-Sunday in EST)
     interface DisciplineTime {
@@ -84,7 +84,7 @@ export async function GET(
     }> = new Map();
 
     filteredActivities?.forEach((activity) => {
-      if (activity.start_date && activity.zone_points) {
+      if (activity.start_date && (activity.corrected_zone_points ?? activity.zone_points)) {
         const date = new Date(activity.start_date);
         // Use EST timezone for week boundaries
         const weekStart = getWeekStartEST(date);
@@ -96,7 +96,7 @@ export async function GET(
 
         const existing = weeklyData.get(weekKey);
         if (existing) {
-          existing.points += activity.zone_points;
+          existing.points += (activity.corrected_zone_points ?? activity.zone_points);
           existing.activityCount += 1;
           if (discipline === 'swim' || discipline === 'bike' || discipline === 'run') {
             existing.trainingTime[discipline] += movingTime;
@@ -109,7 +109,7 @@ export async function GET(
           weeklyData.set(weekKey, {
             weekStart,
             weekEnd,
-            points: activity.zone_points,
+            points: (activity.corrected_zone_points ?? activity.zone_points),
             activityCount: 1,
             trainingTime,
           });

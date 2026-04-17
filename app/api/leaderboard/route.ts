@@ -26,7 +26,7 @@ export async function GET() {
     // Get all activities in competition window (paginated to avoid 1000-row limit)
     const activities = await fetchAllActivities(
       supabase,
-      'athlete_id, zone_points, hidden',
+      'athlete_id, zone_points, corrected_zone_points, hidden',
       { in_competition_window: true }
     );
 
@@ -37,7 +37,7 @@ export async function GET() {
     const athletePointsMap: Record<string, { points: number; count: number }> = {};
     visibleActivities.forEach((activity: any) => {
       const athleteId = activity.athlete_id;
-      const points = parseFloat(activity.zone_points) || 0;
+      const points = parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
 
       if (!athletePointsMap[athleteId]) {
         athletePointsMap[athleteId] = { points: 0, count: 0 };

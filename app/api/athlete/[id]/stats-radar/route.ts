@@ -19,6 +19,7 @@ export async function GET(
         id,
         start_date,
         zone_points,
+        corrected_zone_points,
         sport_type,
         moving_time_s,
         distance_m,
@@ -50,7 +51,7 @@ export async function GET(
     }
 
     // Calculate raw stats
-    const totalPoints = activities.reduce((sum, a) => sum + (parseFloat(a.zone_points) || 0), 0);
+    const totalPoints = activities.reduce((sum, a) => sum + (parseFloat(a.corrected_zone_points ?? a.zone_points) || 0), 0);
     const totalTime = activities.reduce((sum, a) => sum + (a.moving_time_s || 0), 0);
     const totalDistance = activities.reduce((sum, a) => sum + (a.distance_m || 0), 0);
 

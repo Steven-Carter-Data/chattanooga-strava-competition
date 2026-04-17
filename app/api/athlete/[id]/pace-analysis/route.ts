@@ -28,6 +28,7 @@ export async function GET(
         average_speed_mps,
         average_cadence,
         zone_points,
+        corrected_zone_points,
         exclude_from_pace_analysis,
         hidden
       `)
@@ -105,7 +106,7 @@ export async function GET(
           time_s: timeS,
           pace,
           paceUnit,
-          zone_points: parseFloat(activity.zone_points) || 0,
+          zone_points: parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0,
           cadence: activity.average_cadence || null,
         });
       }

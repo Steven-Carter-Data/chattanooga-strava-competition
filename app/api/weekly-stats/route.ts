@@ -42,7 +42,7 @@ function getWeekRange(weekNumber: number, competitionStart: Date): { weekStart: 
  * Generate list of all available weeks from competition start to now
  */
 function getAvailableWeeks(competitionStart: Date): Array<{ weekNumber: number; weekLabel: string; weekStart: string; weekEnd: string; isCurrentWeek: boolean }> {
-  const now = new Date();
+  const now = toEasternTime(new Date());
   const compStartEST = toEasternTime(competitionStart);
   const compStartDay = compStartEST.getDay();
   const startsOnMonday = compStartDay === 1;
@@ -155,6 +155,7 @@ export async function GET(request: NextRequest) {
         athlete_id,
         start_date,
         zone_points,
+        corrected_zone_points,
         distance_m,
         moving_time_s,
         hidden,
@@ -210,7 +211,7 @@ export async function GET(request: NextRequest) {
       const existing = athleteStats.get(key);
 
       if (existing) {
-        existing.total_points += activity.zone_points || 0;
+        existing.total_points += (activity.corrected_zone_points ?? activity.zone_points) || 0;
         existing.activity_count += 1;
         existing.total_distance_m += activity.distance_m || 0;
         existing.total_time_s += activity.moving_time_s || 0;
@@ -220,7 +221,7 @@ export async function GET(request: NextRequest) {
           firstname: activity.firstname,
           lastname: activity.lastname,
           profile_image_url: activity.profile_image_url,
-          total_points: activity.zone_points || 0,
+          total_points: (activity.corrected_zone_points ?? activity.zone_points) || 0,
           activity_count: 1,
           total_distance_m: activity.distance_m || 0,
           total_time_s: activity.moving_time_s || 0,
@@ -235,7 +236,7 @@ export async function GET(request: NextRequest) {
     // Calculate overall stats for the week
     const weekStats = {
       total_activities: activities?.length || 0,
-      total_points: activities?.reduce((sum, a) => sum + (a.zone_points || 0), 0) || 0,
+      total_points: activities?.reduce((sum, a) => sum + ((a.corrected_zone_points ?? a.zone_points) || 0), 0) || 0,
       total_distance_m: activities?.reduce((sum, a) => sum + (a.distance_m || 0), 0) || 0,
       total_time_s: activities?.reduce((sum, a) => sum + (a.moving_time_s || 0), 0) || 0,
     };

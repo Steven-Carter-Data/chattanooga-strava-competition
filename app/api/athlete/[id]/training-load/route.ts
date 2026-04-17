@@ -25,6 +25,7 @@ export async function GET(
         start_date,
         moving_time_s,
         zone_points,
+        corrected_zone_points,
         average_heartrate,
         max_heartrate,
         hidden,
@@ -83,7 +84,7 @@ export async function GET(
         }, 0);
       } else {
         // Fallback: use zone_points as a proxy
-        trainingLoad = parseFloat(activity.zone_points) || 0;
+        trainingLoad = parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
       }
 
       return {
@@ -93,7 +94,7 @@ export async function GET(
         date: activity.start_date,
         moving_time_s: activity.moving_time_s,
         training_load: trainingLoad,
-        zone_points: parseFloat(activity.zone_points) || 0,
+        zone_points: parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0,
       };
     });
 

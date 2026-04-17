@@ -42,7 +42,7 @@ export async function GET() {
     // Get all competition activities with start_date (paginated to avoid 1000-row limit)
     const rawActivities = await fetchAllActivities(
       supabase,
-      'athlete_id, zone_points, start_date, hidden',
+      'athlete_id, zone_points, corrected_zone_points, start_date, hidden',
       { in_competition_window: true }
     );
 
@@ -63,7 +63,7 @@ export async function GET() {
 
     for (const activity of activities) {
       const aid = activity.athlete_id;
-      const points = parseFloat(activity.zone_points) || 0;
+      const points = parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
       const weekNum = activity.start_date ? getWeekNumber(activity.start_date) : 0;
 
       if (!athleteWeeks[aid]) athleteWeeks[aid] = {};

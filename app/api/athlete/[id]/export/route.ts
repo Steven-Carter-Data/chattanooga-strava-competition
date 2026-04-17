@@ -41,6 +41,7 @@ export async function GET(
         average_heartrate,
         max_heartrate,
         zone_points,
+        corrected_zone_points,
         in_competition_window,
         hidden,
         heart_rate_zones (

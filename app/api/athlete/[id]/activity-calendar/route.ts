@@ -19,6 +19,7 @@ export async function GET(
         id,
         start_date,
         zone_points,
+        corrected_zone_points,
         sport_type,
         moving_time_s,
         distance_m
@@ -58,7 +59,7 @@ export async function GET(
         };
       }
 
-      dailyData[dateStr].points += parseFloat(activity.zone_points) || 0;
+      dailyData[dateStr].points += parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
       dailyData[dateStr].activities += 1;
       dailyData[dateStr].totalTime += activity.moving_time_s || 0;
       dailyData[dateStr].totalDistance += activity.distance_m || 0;

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, getActiveCompetitionConfig } from '@/lib/supabase';
 import { getAthleteAccessToken } from '@/lib/strava';
-import { fetchAthleteZones, fetchActivityZones, extractHRZoneTimes } from '@/lib/strava-zones';
+import { fetchAthleteZones, fetchActivityZones, extractHRZoneTimes, calculateHRZonesWithCustomBoundaries } from '@/lib/strava-zones';
 import {
   getActivityWeekNumber,
   isSwimCapWeek,
@@ -281,6 +281,11 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
   // Determine if activity has HR data (will be used to decide final points)
   const hasHRData = activity.average_heartrate != null || activity.max_heartrate != null;
 
+  // Bike sport types that Strava applies ride-specific zones to
+  const RIDE_SPORT_TYPES = ['Ride', 'Peloton', 'VirtualRide', 'EBikeRide', 'EMountainBikeRide',
+    'GravelRide', 'MountainBikeRide', 'Velomobile', 'Handcycle'];
+  const isRideActivity = RIDE_SPORT_TYPES.includes(classifiedSportType);
+
   // Fetch activity zones from Strava API (needed for HR zone scoring and swim cap overflow)
   const activityZones = await fetchActivityZones(activity.id, accessToken);
   let hrZones: { zone_1: number; zone_2: number; zone_3: number; zone_4: number; zone_5: number } | null = null;
@@ -289,6 +294,33 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     hrZones = extractHRZoneTimes(activityZones, activity.moving_time);
     if (hrZones) {
       console.log(`Fetched zones directly from Strava for activity ${activity.id}:`, hrZones);
+    }
+  }
+
+  // For ride activities, also calculate zones using DEFAULT boundaries
+  // This corrects for Strava's sport-specific ride zones being different from default
+  let correctedZonePoints: number | undefined;
+  if (isRideActivity && hasHRData && athleteZones?.heart_rate?.zones) {
+    try {
+      const streamResp = await fetch(
+        `https://www.strava.com/api/v3/activities/${activity.id}/streams?keys=heartrate,time&key_by_type=true`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (streamResp.ok) {
+        const streamData = await streamResp.json();
+        const hrStream = streamData.heartrate?.data;
+        const timeStream = streamData.time?.data;
+        if (hrStream && timeStream) {
+          const defaultCalc = calculateHRZonesWithCustomBoundaries(hrStream, timeStream, athleteZones.heart_rate.zones);
+          correctedZonePoints = Math.round(
+            ((defaultCalc.zone_1 / 60) * 1 + (defaultCalc.zone_2 / 60) * 2 + (defaultCalc.zone_3 / 60) * 3 +
+             (defaultCalc.zone_4 / 60) * 4 + (defaultCalc.zone_5 / 60) * 5) * 100
+          ) / 100;
+          console.log(`Activity ${activity.id}: corrected points using default zones: ${correctedZonePoints}`);
+        }
+      }
+    } catch (err) {
+      console.warn(`Could not fetch HR stream for default zone correction on activity ${activity.id}:`, err);
     }
   }
 
@@ -332,6 +364,13 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
     console.log(`Activity ${activity.id} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${(activity.moving_time / 60).toFixed(1)} min × 1)`);
   }
 
+  // For non-ride activities, corrected_zone_points equals zone_points (default zones already used)
+  // For ride activities, corrected_zone_points uses default zone calculation
+  // For swims/no-HR, corrected_zone_points equals zone_points (not HR-zone dependent)
+  const finalCorrectedPoints = isRideActivity && correctedZonePoints !== undefined
+    ? correctedZonePoints
+    : zonePoints;
+
   // Insert activity
   const { data: newActivity, error: activityError } = await supabaseAdmin
     .from('activities')
@@ -348,6 +387,7 @@ async function insertActivity(activity: any, athleteId: string, accessToken: str
       average_cadence: detailedActivity.average_cadence || null,
       in_competition_window: true,
       ...(zonePoints !== undefined ? { zone_points: zonePoints } : {}),
+      ...(finalCorrectedPoints !== undefined ? { corrected_zone_points: finalCorrectedPoints } : {}),
     })
     .select()
     .single();

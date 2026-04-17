@@ -25,6 +25,7 @@ export async function GET(
         distance_m,
         moving_time_s,
         zone_points,
+        corrected_zone_points,
         average_heartrate,
         max_heartrate,
         hidden,
@@ -95,8 +96,8 @@ export async function GET(
 function calculatePersonalBests(activities: any[]) {
   // Highest points in a single activity
   const highestPointsActivity = activities.reduce((best, act) => {
-    const points = parseFloat(act.zone_points) || 0;
-    if (!best || points > (parseFloat(best.zone_points) || 0)) {
+    const points = parseFloat(act.corrected_zone_points ?? act.zone_points) || 0;
+    if (!best || points > (parseFloat(best.corrected_zone_points ?? best.zone_points) || 0)) {
       return act;
     }
     return best;
@@ -166,8 +167,8 @@ function calculatePersonalBests(activities: any[]) {
     const sportActivities = activities.filter(a => a.sport_type === sport);
     if (sportActivities.length > 0) {
       const bestPoints = sportActivities.reduce((best, act) => {
-        const points = parseFloat(act.zone_points) || 0;
-        if (!best || points > (parseFloat(best.zone_points) || 0)) {
+        const points = parseFloat(act.corrected_zone_points ?? act.zone_points) || 0;
+        if (!best || points > (parseFloat(best.corrected_zone_points ?? best.zone_points) || 0)) {
           return act;
         }
         return best;
@@ -189,7 +190,7 @@ function calculatePersonalBests(activities: any[]) {
             name: bestPoints.name,
             start_date: bestPoints.start_date,
           },
-          points: parseFloat(bestPoints.zone_points) || 0,
+          points: parseFloat(bestPoints.corrected_zone_points ?? bestPoints.zone_points) || 0,
         } : null,
         longestTime: longestTime ? {
           activity: {
@@ -211,7 +212,7 @@ function calculatePersonalBests(activities: any[]) {
         sport_type: highestPointsActivity.sport_type,
         start_date: highestPointsActivity.start_date,
       },
-      points: parseFloat(highestPointsActivity.zone_points) || 0,
+      points: parseFloat(highestPointsActivity.corrected_zone_points ?? highestPointsActivity.zone_points) || 0,
     } : null,
     longestDuration: longestActivity ? {
       activity: {
@@ -258,7 +259,7 @@ function calculateWeeklyStats(activities: any[]) {
     if (!weeklyData[weekKey]) {
       weeklyData[weekKey] = { points: 0, activities: 0, startDate: weekKey };
     }
-    weeklyData[weekKey].points += parseFloat(activity.zone_points) || 0;
+    weeklyData[weekKey].points += parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
     weeklyData[weekKey].activities += 1;
   }
 
@@ -371,7 +372,7 @@ function calculateStreaks(activities: any[]) {
 }
 
 function calculateMilestones(activities: any[]) {
-  const totalPoints = activities.reduce((sum, act) => sum + (parseFloat(act.zone_points) || 0), 0);
+  const totalPoints = activities.reduce((sum, act) => sum + (parseFloat(act.corrected_zone_points ?? act.zone_points) || 0), 0);
   const totalDistance = activities.reduce((sum, act) => sum + (act.distance_m || 0), 0);
   const totalTime = activities.reduce((sum, act) => sum + (act.moving_time_s || 0), 0);
 

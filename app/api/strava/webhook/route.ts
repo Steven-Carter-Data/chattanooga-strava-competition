@@ -4,7 +4,7 @@ import {
   fetchStravaActivity,
   getAthleteAccessToken,
 } from '@/lib/strava';
-import { fetchActivityZones, extractHRZoneTimes } from '@/lib/strava-zones';
+import { fetchActivityZones, extractHRZoneTimes, calculateHRZonesWithCustomBoundaries, fetchAthleteZones } from '@/lib/strava-zones';
 import { StravaWebhookEvent } from '@/lib/types';
 import {
   getActivityWeekNumber,
@@ -217,6 +217,11 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     inCompetitionWindow = activityDate >= competitionStart! && activityDate <= competitionEnd!;
   }
 
+  // Bike sport types that Strava applies ride-specific zones to
+  const RIDE_SPORT_TYPES = ['Ride', 'Peloton', 'VirtualRide', 'EBikeRide', 'EMountainBikeRide',
+    'GravelRide', 'MountainBikeRide', 'Velomobile', 'Handcycle'];
+  const isRideActivity = RIDE_SPORT_TYPES.includes(classifiedSportType);
+
   // Fetch activity zones from Strava API (needed for both HR zone scoring and swim cap overflow)
   const activityZones = await fetchActivityZones(activityId, accessToken);
   let hrZones: { zone_1: number; zone_2: number; zone_3: number; zone_4: number; zone_5: number } | null = null;
@@ -225,6 +230,36 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     hrZones = extractHRZoneTimes(activityZones, activity.moving_time);
     if (hrZones) {
       console.log(`Fetched zones directly from Strava for activity ${activityId}:`, hrZones);
+    }
+  }
+
+  // For ride activities, calculate corrected points using DEFAULT zone boundaries
+  let correctedZonePoints: number | undefined;
+  if (isRideActivity && hasHRData) {
+    // Fetch athlete's default zones
+    const athleteZones = await fetchAthleteZones(accessToken);
+    if (athleteZones?.heart_rate?.zones) {
+      try {
+        const streamResp = await fetch(
+          `https://www.strava.com/api/v3/activities/${activityId}/streams?keys=heartrate,time&key_by_type=true`,
+          { headers: { Authorization: `Bearer ${accessToken}` } }
+        );
+        if (streamResp.ok) {
+          const streamData = await streamResp.json();
+          const hrStream = streamData.heartrate?.data;
+          const timeStream = streamData.time?.data;
+          if (hrStream && timeStream) {
+            const defaultCalc = calculateHRZonesWithCustomBoundaries(hrStream, timeStream, athleteZones.heart_rate.zones);
+            correctedZonePoints = Math.round(
+              ((defaultCalc.zone_1 / 60) * 1 + (defaultCalc.zone_2 / 60) * 2 + (defaultCalc.zone_3 / 60) * 3 +
+               (defaultCalc.zone_4 / 60) * 4 + (defaultCalc.zone_5 / 60) * 5) * 100
+            ) / 100;
+            console.log(`Activity ${activityId}: corrected points using default zones: ${correctedZonePoints}`);
+          }
+        }
+      } catch (err) {
+        console.warn(`Could not fetch HR stream for default zone correction on activity ${activityId}:`, err);
+      }
     }
   }
 
@@ -274,6 +309,12 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
     console.log(`Activity ${activityId} has no HR data - using Zone 1 fallback: ${zone1FallbackPoints.toFixed(1)} points (${((activity.moving_time || 0) / 60).toFixed(1)} min × 1)`);
   }
 
+  // For non-ride activities, corrected_zone_points equals zone_points
+  // For ride activities, corrected_zone_points uses default zone calculation
+  const finalCorrectedPoints = isRideActivity && correctedZonePoints !== undefined
+    ? correctedZonePoints
+    : zonePoints;
+
   // Upsert activity
   const { data: activityRecord, error: activityError } = await supabaseAdmin
     .from('activities')
@@ -294,6 +335,7 @@ async function handleActivityCreateOrUpdate(event: StravaWebhookEvent) {
         raw_payload: activity,
         in_competition_window: inCompetitionWindow,
         zone_points: zonePoints,
+        corrected_zone_points: finalCorrectedPoints,
       },
       { onConflict: 'strava_activity_id' }
     )

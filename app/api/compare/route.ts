@@ -76,6 +76,7 @@ async function fetchAthleteComparisonData(athleteId: string) {
         distance_m,
         moving_time_s,
         zone_points,
+        corrected_zone_points,
         heart_rate_zones (
           zone_1_time_s,
           zone_2_time_s,
@@ -94,7 +95,7 @@ async function fetchAthleteComparisonData(athleteId: string) {
     const activityList = activities || [];
 
     // Calculate stats
-    const totalPoints = activityList.reduce((sum, a) => sum + (parseFloat(a.zone_points) || 0), 0);
+    const totalPoints = activityList.reduce((sum, a) => sum + (parseFloat(a.corrected_zone_points ?? a.zone_points) || 0), 0);
     const totalDistance = activityList.reduce((sum, a) => sum + (a.distance_m || 0), 0);
     const totalTime = activityList.reduce((sum, a) => sum + (a.moving_time_s || 0), 0);
 
@@ -119,7 +120,7 @@ async function fetchAthleteComparisonData(athleteId: string) {
         sportBreakdown[sport] = { count: 0, points: 0, distance: 0, time: 0 };
       }
       sportBreakdown[sport].count++;
-      sportBreakdown[sport].points += parseFloat(activity.zone_points) || 0;
+      sportBreakdown[sport].points += parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
       sportBreakdown[sport].distance += activity.distance_m || 0;
       sportBreakdown[sport].time += activity.moving_time_s || 0;
     }

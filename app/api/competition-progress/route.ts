@@ -61,6 +61,7 @@ export async function GET() {
         lastname,
         activities (
           zone_points,
+          corrected_zone_points,
           start_date
         )
       `);
@@ -77,7 +78,7 @@ export async function GET() {
     const projections = (athletes || []).map((athlete: any) => {
       const activities = athlete.activities || [];
       const totalPoints = activities.reduce((sum: number, act: any) =>
-        sum + (parseFloat(act.zone_points) || 0), 0);
+        sum + (parseFloat(act.corrected_zone_points ?? act.zone_points) || 0), 0);
 
       // Calculate points per day based on actual activity days
       let pointsPerDay = 0;

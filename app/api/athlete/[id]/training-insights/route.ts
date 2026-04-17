@@ -23,6 +23,7 @@ export async function GET(
         distance_m,
         moving_time_s,
         zone_points,
+        corrected_zone_points,
         hidden,
         heart_rate_zones (
           zone_1_time_s,
@@ -94,7 +95,7 @@ export async function GET(
       sportBalance[discipline].time += activity.moving_time_s || 0;
       sportBalance[discipline].distance += activity.distance_m || 0;
       sportBalance[discipline].activities++;
-      sportBalance[discipline].points += parseFloat(activity.zone_points) || 0;
+      sportBalance[discipline].points += parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
     }
 
     // Total bike time (outdoor + indoor) for percentage calculations
@@ -170,7 +171,7 @@ export async function GET(
         ];
         load = zoneTimes.reduce((sum, time, idx) => sum + (time / 60) * zoneWeights[idx], 0);
       } else {
-        load = parseFloat(activity.zone_points) || 0;
+        load = parseFloat(activity.corrected_zone_points ?? activity.zone_points) || 0;
       }
 
       dailyLoads[dateStr] = (dailyLoads[dateStr] || 0) + load;
