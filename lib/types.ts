@@ -107,3 +107,25 @@ export interface StravaHeartRateStream {
   original_size: number;
   resolution: 'low' | 'medium' | 'high';
 }
+
+// Race Day Checklist types
+export interface ChecklistItem {
+  id: string;
+  category: string;
+  item_text: string;
+  added_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // Joined fields
+  added_by_firstname?: string | null;
+  added_by_lastname?: string | null;
+}
+
+export interface ChecklistCheck {
+  id: string;
+  item_id: string;
+  athlete_id: string;
+  checked: boolean;
+  checked_at: string | null;
+  created_at: string;
+}

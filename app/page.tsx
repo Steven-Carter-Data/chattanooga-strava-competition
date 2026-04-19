@@ -5,6 +5,7 @@ import { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { LeaderboardEntry } from '@/lib/types';
 import CompetitionProgress from '@/app/components/CompetitionProgress';
+import RaceDayChecklist from '@/app/components/RaceDayChecklist';
 
 // Helper function to convert number to Roman numeral
 function toRoman(num: number): string {
@@ -344,6 +345,9 @@ function HomeContent() {
 
         {/* Competition Progress Indicator */}
         <CompetitionProgress />
+
+        {/* Race Day Checklist */}
+        <RaceDayChecklist />
 
         {/* Scoring Information - Collapsible */}
         <div className="card p-6 mb-10">
