@@ -101,34 +101,48 @@ export async function POST(
 
     console.log('Fetching activities after:', queryStartDate.toISOString());
 
-    // Fetch activities from Strava (after query start date)
-    const stravaResponse = await fetch(
-      `https://www.strava.com/api/v3/athlete/activities?after=${Math.floor(queryStartDate.getTime() / 1000)}&per_page=200`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    // Fetch ALL activities from Strava with pagination (200 per page max)
+    const afterEpoch = Math.floor(queryStartDate.getTime() / 1000);
+    const activities: any[] = [];
+    let page = 1;
 
-    if (!stravaResponse.ok) {
-      const errorText = await stravaResponse.text();
-      console.error('Strava API error:', {
-        status: stravaResponse.status,
-        statusText: stravaResponse.statusText,
-        body: errorText,
-      });
-      return NextResponse.json(
+    while (true) {
+      const stravaResponse = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?after=${afterEpoch}&per_page=200&page=${page}`,
         {
-          error: 'Failed to fetch activities from Strava',
-          details: `Status ${stravaResponse.status}: ${stravaResponse.statusText}`,
-          stravaError: errorText,
-        },
-        { status: 500 }
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
       );
+
+      if (!stravaResponse.ok) {
+        const errorText = await stravaResponse.text();
+        console.error('Strava API error:', {
+          status: stravaResponse.status,
+          statusText: stravaResponse.statusText,
+          body: errorText,
+        });
+        return NextResponse.json(
+          {
+            error: 'Failed to fetch activities from Strava',
+            details: `Status ${stravaResponse.status}: ${stravaResponse.statusText}`,
+            stravaError: errorText,
+          },
+          { status: 500 }
+        );
+      }
+
+      const pageActivities = await stravaResponse.json();
+      activities.push(...pageActivities);
+      console.log(`Fetched page ${page}: ${pageActivities.length} activities`);
+
+      // If we got fewer than 200, we've reached the last page
+      if (pageActivities.length < 200) break;
+      page++;
     }
 
-    const activities = await stravaResponse.json();
+    console.log(`Total activities fetched from Strava: ${activities.length}`);
 
     let newCount = 0;
     let existingCount = 0;
