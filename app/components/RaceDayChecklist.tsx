@@ -10,6 +10,7 @@ interface ChecklistItemData {
   added_by_firstname: string | null;
   added_by_lastname: string | null;
   checked: boolean;
+  dismissed: boolean;
   check_count: number;
 }
 
@@ -73,10 +74,12 @@ export default function RaceDayChecklist() {
   const [selectedAthlete, setSelectedAthlete] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [isOpen, setIsOpen] = useState(false);
-  const [addingItem, setAddingItem] = useState<string | null>(null); // category key when adding
+  const [addingItem, setAddingItem] = useState<string | null>(null);
   const [newItemText, setNewItemText] = useState('');
   const [savingItem, setSavingItem] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORIES.map(c => c.key)));
+
+  const isMasterView = !selectedAthlete;
 
   // Fetch athletes for the dropdown
   useEffect(() => {
@@ -116,7 +119,6 @@ export default function RaceDayChecklist() {
     }
   }, [selectedAthlete]);
 
-  // Fetch checklist whenever selectedAthlete changes
   useEffect(() => {
     fetchChecklist();
   }, [fetchChecklist]);
@@ -155,7 +157,46 @@ export default function RaceDayChecklist() {
       });
     } catch (err) {
       console.error('Failed to toggle check:', err);
-      // Revert on failure
+      fetchChecklist();
+    }
+  }
+
+  async function handleDismiss(itemId: string, currentDismissed: boolean) {
+    if (!selectedAthlete) return;
+
+    // Optimistic update
+    setChecklist(prev => {
+      const updated = { ...prev };
+      for (const cat of Object.keys(updated)) {
+        updated[cat] = updated[cat].map(item =>
+          item.id === itemId
+            ? {
+                ...item,
+                dismissed: !currentDismissed,
+                // If dismissing, also uncheck
+                checked: !currentDismissed ? false : item.checked,
+                check_count: !currentDismissed && item.checked
+                  ? Math.max(0, item.check_count - 1)
+                  : item.check_count,
+              }
+            : item
+        );
+      }
+      return updated;
+    });
+
+    try {
+      await fetch('/api/checklist/dismiss', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          item_id: itemId,
+          athlete_id: selectedAthlete,
+          dismissed: !currentDismissed,
+        }),
+      });
+    } catch (err) {
+      console.error('Failed to dismiss/restore item:', err);
       fetchChecklist();
     }
   }
@@ -187,22 +228,6 @@ export default function RaceDayChecklist() {
     }
   }
 
-  async function handleDeleteItem(itemId: string) {
-    try {
-      const res = await fetch('/api/checklist', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ item_id: itemId }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        fetchChecklist();
-      }
-    } catch (err) {
-      console.error('Failed to delete item:', err);
-    }
-  }
-
   function toggleCategory(key: string) {
     setExpandedCategories(prev => {
       const next = new Set(prev);
@@ -215,10 +240,14 @@ export default function RaceDayChecklist() {
     });
   }
 
-  // Calculate overall progress
+  // Calculate overall progress (personal view only, excludes dismissed items)
   const allItems = Object.values(checklist).flat();
-  const checkedItems = allItems.filter(i => i.checked);
-  const progressPercent = allItems.length > 0 ? Math.round((checkedItems.length / allItems.length) * 100) : 0;
+  const activeItems = allItems.filter(i => !i.dismissed);
+  const checkedItems = activeItems.filter(i => i.checked);
+  const dismissedItems = allItems.filter(i => i.dismissed);
+  const progressPercent = activeItems.length > 0 ? Math.round((checkedItems.length / activeItems.length) * 100) : 0;
+
+  const selectedAthleteName = athletes.find(a => a.athlete_id === selectedAthlete);
 
   return (
     <div className="card p-6 mb-10">
@@ -238,9 +267,10 @@ export default function RaceDayChecklist() {
               Race Day Checklist
             </h3>
             <p className="text-xs text-muted font-body mt-0.5">
-              Community packing list for May 18th
-              {selectedAthlete && allItems.length > 0 && (
-                <span className="text-gold/60"> &middot; {checkedItems.length}/{allItems.length} packed</span>
+              {isMasterView ? 'Master list' : `${selectedAthleteName?.firstname}'s list`}
+              {' '}&middot; {allItems.length} items
+              {!isMasterView && activeItems.length > 0 && (
+                <span className="text-gold/60"> &middot; {checkedItems.length}/{activeItems.length} packed</span>
               )}
             </p>
           </div>
@@ -258,14 +288,14 @@ export default function RaceDayChecklist() {
       {isOpen && (
       <div className="mt-8 pt-6 border-t border-gold/20">
 
-      {/* Athlete Selector */}
+      {/* View Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3 mb-6 p-4 bg-background/50 border border-gold/10 rounded">
         <div className="flex items-center gap-2">
           <svg className="w-4 h-4 text-gold" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
           </svg>
           <label className="text-sm font-body text-muted tracking-wide uppercase">
-            Packing as:
+            Viewing:
           </label>
         </div>
         <select
@@ -273,22 +303,27 @@ export default function RaceDayChecklist() {
           onChange={(e) => setSelectedAthlete(e.target.value)}
           className="bg-card border border-gold/20 text-foreground font-body text-sm px-3 py-2 rounded focus:border-gold/50 focus:outline-none transition-colors w-full sm:w-auto"
         >
-          <option value="">Select your name to track items</option>
+          <option value="">Master Checklist</option>
           {athletes.map(a => (
             <option key={a.athlete_id} value={a.athlete_id}>
-              {a.firstname} {a.lastname}
+              {a.firstname} {a.lastname}&apos;s Checklist
             </option>
           ))}
         </select>
-        {selectedAthlete && (
+        {isMasterView ? (
           <span className="text-xs text-muted font-body">
-            {checkedItems.length} of {allItems.length} items packed
+            {allItems.length} items &middot; Anyone can add
+          </span>
+        ) : (
+          <span className="text-xs text-muted font-body">
+            {checkedItems.length} of {activeItems.length} packed
+            {dismissedItems.length > 0 && ` · ${dismissedItems.length} skipped`}
           </span>
         )}
       </div>
 
-      {/* Progress Bar (only show when athlete selected) */}
-      {selectedAthlete && allItems.length > 0 && (
+      {/* Progress Bar (personal view only) */}
+      {!isMasterView && activeItems.length > 0 && (
         <div className="mb-6">
           <div className="flex items-center justify-between mb-1">
             <span className="text-xs text-muted font-body uppercase tracking-wider">Your packing progress</span>
@@ -314,9 +349,14 @@ export default function RaceDayChecklist() {
         /* Category Sections */
         <div className="space-y-4">
           {CATEGORIES.map(cat => {
-            const items = checklist[cat.key] || [];
-            const catChecked = items.filter(i => i.checked).length;
+            const allCatItems = checklist[cat.key] || [];
+            const activeCatItems = allCatItems.filter(i => !i.dismissed);
+            const dismissedCatItems = allCatItems.filter(i => i.dismissed);
+            const catChecked = activeCatItems.filter(i => i.checked).length;
             const isExpanded = expandedCategories.has(cat.key);
+
+            // In personal view, show active item count; in master, show all
+            const displayCount = isMasterView ? allCatItems.length : activeCatItems.length;
 
             return (
               <div key={cat.key} className="border border-gold/10 rounded overflow-hidden">
@@ -334,18 +374,21 @@ export default function RaceDayChecklist() {
                         {cat.label}
                       </h3>
                       <p className="text-xs text-muted font-body">
-                        {items.length} item{items.length !== 1 ? 's' : ''}
-                        {selectedAthlete && ` · ${catChecked} packed`}
+                        {displayCount} item{displayCount !== 1 ? 's' : ''}
+                        {!isMasterView && ` · ${catChecked} packed`}
+                        {!isMasterView && dismissedCatItems.length > 0 && (
+                          <span className="text-muted/40"> · {dismissedCatItems.length} skipped</span>
+                        )}
                       </p>
                     </div>
                   </div>
                   <div className="flex items-center gap-3">
-                    {selectedAthlete && items.length > 0 && (
+                    {!isMasterView && activeCatItems.length > 0 && (
                       <div className="hidden sm:flex items-center gap-1">
                         <div className="w-16 h-1.5 bg-background/80 rounded-full overflow-hidden">
                           <div
                             className="h-full bg-gold/60 rounded-full transition-all duration-300"
-                            style={{ width: `${items.length > 0 ? (catChecked / items.length) * 100 : 0}%` }}
+                            style={{ width: `${activeCatItems.length > 0 ? (catChecked / activeCatItems.length) * 100 : 0}%` }}
                           ></div>
                         </div>
                       </div>
@@ -364,74 +407,121 @@ export default function RaceDayChecklist() {
                 {/* Items List */}
                 {isExpanded && (
                   <div className="border-t border-gold/10">
-                    {items.length === 0 ? (
+                    {allCatItems.length === 0 ? (
                       <p className="p-4 text-sm text-muted/60 font-body italic">No items yet. Add one below!</p>
                     ) : (
-                      <ul className="divide-y divide-gold/5">
-                        {items.map(item => (
-                          <li
-                            key={item.id}
-                            className="flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-card/40 transition-colors group/item"
-                          >
-                            {/* Checkbox */}
-                            {selectedAthlete ? (
-                              <button
-                                onClick={() => handleToggleCheck(item.id, item.checked)}
-                                className={`w-5 h-5 flex-shrink-0 border rounded transition-all duration-200 flex items-center justify-center ${
-                                  item.checked
-                                    ? 'bg-gold border-gold text-background'
-                                    : 'border-gold/30 hover:border-gold/60'
+                      <>
+                        {/* Active items */}
+                        <ul className="divide-y divide-gold/5">
+                          {(isMasterView ? allCatItems : activeCatItems).map(item => (
+                            <li
+                              key={item.id}
+                              className="flex items-center gap-3 px-3 sm:px-4 py-2.5 hover:bg-card/40 transition-colors group/item"
+                            >
+                              {/* Checkbox (personal view) or bullet (master view) */}
+                              {!isMasterView ? (
+                                <button
+                                  onClick={() => handleToggleCheck(item.id, item.checked)}
+                                  className={`w-5 h-5 flex-shrink-0 border rounded transition-all duration-200 flex items-center justify-center ${
+                                    item.checked
+                                      ? 'bg-gold border-gold text-background'
+                                      : 'border-gold/30 hover:border-gold/60'
+                                  }`}
+                                >
+                                  {item.checked && (
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </button>
+                              ) : (
+                                <div className="w-5 h-5 flex-shrink-0 border border-gold/15 rounded flex items-center justify-center">
+                                  <div className="w-1.5 h-1.5 bg-gold/20 rounded-full"></div>
+                                </div>
+                              )}
+
+                              {/* Item text */}
+                              <span
+                                className={`flex-1 text-sm font-body transition-colors ${
+                                  !isMasterView && item.checked ? 'text-muted line-through' : 'text-foreground'
                                 }`}
                               >
-                                {item.checked && (
-                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                  </svg>
+                                {item.item_text}
+                              </span>
+
+                              {/* Meta info */}
+                              <div className="flex items-center gap-2 flex-shrink-0">
+                                {item.check_count > 0 && (
+                                  <span className="text-xs text-muted/60 font-body hidden sm:inline">
+                                    {item.check_count} packed
+                                  </span>
                                 )}
-                              </button>
-                            ) : (
-                              <div className="w-5 h-5 flex-shrink-0 border border-gold/15 rounded flex items-center justify-center">
-                                <div className="w-1.5 h-1.5 bg-gold/20 rounded-full"></div>
+                                {item.added_by_firstname && (
+                                  <span className="text-xs text-gold/40 font-body hidden sm:inline">
+                                    +{item.added_by_firstname}
+                                  </span>
+                                )}
+                                {/* Dismiss button (personal view only) */}
+                                {!isMasterView && (
+                                  <button
+                                    onClick={() => handleDismiss(item.id, false)}
+                                    className="opacity-0 group-hover/item:opacity-100 text-muted/40 hover:text-orange-400 transition-all p-1"
+                                    title="Not relevant - skip this item"
+                                  >
+                                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                    </svg>
+                                  </button>
+                                )}
                               </div>
-                            )}
+                            </li>
+                          ))}
+                        </ul>
 
-                            {/* Item text */}
-                            <span
-                              className={`flex-1 text-sm font-body transition-colors ${
-                                item.checked ? 'text-muted line-through' : 'text-foreground'
-                              }`}
-                            >
-                              {item.item_text}
-                            </span>
-
-                            {/* Meta info */}
-                            <div className="flex items-center gap-2 flex-shrink-0">
-                              {item.check_count > 0 && (
-                                <span className="text-xs text-muted/60 font-body hidden sm:inline">
-                                  {item.check_count} packed
-                                </span>
-                              )}
-                              {item.added_by_firstname && (
-                                <span className="text-xs text-gold/40 font-body hidden sm:inline">
-                                  +{item.added_by_firstname}
-                                </span>
-                              )}
-                              <button
-                                onClick={() => handleDeleteItem(item.id)}
-                                className="opacity-0 group-hover/item:opacity-100 text-muted/40 hover:text-red-500 transition-all p-1"
-                                title="Remove item"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
+                        {/* Dismissed items section (personal view only) */}
+                        {!isMasterView && dismissedCatItems.length > 0 && (
+                          <div className="border-t border-gold/10 bg-background/20">
+                            <div className="px-3 sm:px-4 py-2 flex items-center gap-2">
+                              <span className="text-xs text-muted/40 font-body uppercase tracking-wider">
+                                Skipped ({dismissedCatItems.length})
+                              </span>
+                              <div className="flex-1 h-px bg-gold/5"></div>
                             </div>
-                          </li>
-                        ))}
-                      </ul>
+                            <ul className="divide-y divide-gold/5">
+                              {dismissedCatItems.map(item => (
+                                <li
+                                  key={item.id}
+                                  className="flex items-center gap-3 px-3 sm:px-4 py-2 hover:bg-card/20 transition-colors group/dismissed"
+                                >
+                                  {/* Strikethrough indicator */}
+                                  <div className="w-5 h-5 flex-shrink-0 flex items-center justify-center">
+                                    <svg className="w-4 h-4 text-muted/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                                    </svg>
+                                  </div>
+
+                                  {/* Item text - struck through */}
+                                  <span className="flex-1 text-sm font-body text-muted/40 line-through">
+                                    {item.item_text}
+                                  </span>
+
+                                  {/* Restore button */}
+                                  <button
+                                    onClick={() => handleDismiss(item.id, true)}
+                                    className="opacity-0 group-hover/dismissed:opacity-100 text-muted/40 hover:text-gold transition-all px-2 py-1 text-xs font-body border border-gold/20 rounded hover:border-gold/40"
+                                    title="Restore this item to your checklist"
+                                  >
+                                    Restore
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </>
                     )}
 
-                    {/* Add Item Row */}
+                    {/* Add Item Row (available in both views) */}
                     <div className="p-3 sm:p-4 border-t border-gold/10 bg-background/30">
                       {addingItem === cat.key ? (
                         <div className="flex items-center gap-2">
@@ -479,7 +569,7 @@ export default function RaceDayChecklist() {
                           <svg className="w-4 h-4 group-hover/add:text-gold transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                           </svg>
-                          Add item
+                          Add item to master list
                         </button>
                       )}
                     </div>
@@ -497,8 +587,10 @@ export default function RaceDayChecklist() {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
         </svg>
         <p className="text-xs text-muted/50 font-body">
-          Anyone can add items to this shared list. Select your name above to track your own packing progress.
-          Each athlete&apos;s check-offs are independent.
+          {isMasterView
+            ? 'This is the master list. Anyone can add items here. Select your name above to track your own packing and skip items that don\'t apply to you.'
+            : 'Check items you\'ve packed. Skip items that aren\'t relevant to you \u2014 you can always restore them. Items you add will appear on the master list for everyone.'
+          }
         </p>
       </div>
 

@@ -5,8 +5,9 @@ const VALID_CATEGORIES = ['Swim', 'T1', 'Bike', 'T2', 'Run', 'General'];
 
 /**
  * GET /api/checklist
- * Returns all checklist items grouped by category, with check status for a given athlete
- * Query params: ?athlete_id=<uuid> (optional - to get per-athlete check status)
+ * Returns all checklist items grouped by category.
+ * When athlete_id is provided, includes per-athlete check and dismissal status.
+ * Query params: ?athlete_id=<uuid> (optional)
  */
 export async function GET(request: NextRequest) {
   try {
@@ -32,24 +33,35 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to fetch checklist items' }, { status: 500 });
     }
 
-    // If athlete_id provided, fetch their check statuses
+    // If athlete_id provided, fetch their check statuses and dismissals
     let checksMap: Record<string, boolean> = {};
+    let dismissedSet: Set<string> = new Set();
+
     if (athleteId) {
       const { data: checks, error: checksError } = await supabase
         .from('checklist_checks')
         .select('item_id, checked')
         .eq('athlete_id', athleteId);
 
-      if (checksError) {
-        console.error('Error fetching checks:', checksError);
-      } else if (checks) {
+      if (!checksError && checks) {
         checks.forEach((c: any) => {
           checksMap[c.item_id] = c.checked;
         });
       }
+
+      const { data: dismissals, error: dismissError } = await supabase
+        .from('checklist_dismissals')
+        .select('item_id')
+        .eq('athlete_id', athleteId);
+
+      if (!dismissError && dismissals) {
+        dismissals.forEach((d: any) => {
+          dismissedSet.add(d.item_id);
+        });
+      }
     }
 
-    // Also fetch all athletes' check counts per item (for "X of Y packed" display)
+    // Fetch all athletes' check counts per item (for "X of Y packed" display)
     const { data: allChecks, error: allChecksError } = await supabase
       .from('checklist_checks')
       .select('item_id')
@@ -62,7 +74,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // Format response with added_by name flattened
+    // Format response
     const formattedItems = (items || []).map((item: any) => ({
       id: item.id,
       category: item.category,
@@ -73,6 +85,7 @@ export async function GET(request: NextRequest) {
       created_at: item.created_at,
       updated_at: item.updated_at,
       checked: checksMap[item.id] || false,
+      dismissed: dismissedSet.has(item.id),
       check_count: checkCountMap[item.id] || 0,
     }));
 
@@ -95,7 +108,7 @@ export async function GET(request: NextRequest) {
 
 /**
  * POST /api/checklist
- * Add a new checklist item
+ * Add a new item to the master checklist
  * Body: { category: string, item_text: string, added_by?: string }
  */
 export async function POST(request: NextRequest) {
@@ -131,37 +144,6 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data });
-  } catch (error) {
-    console.error('Unexpected error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
-  }
-}
-
-/**
- * DELETE /api/checklist
- * Remove a checklist item
- * Body: { item_id: string }
- */
-export async function DELETE(request: NextRequest) {
-  try {
-    const body = await request.json();
-    const { item_id } = body;
-
-    if (!item_id) {
-      return NextResponse.json({ error: 'item_id is required' }, { status: 400 });
-    }
-
-    const { error } = await supabase
-      .from('checklist_items')
-      .delete()
-      .eq('id', item_id);
-
-    if (error) {
-      console.error('Error deleting checklist item:', error);
-      return NextResponse.json({ error: 'Failed to delete checklist item' }, { status: 500 });
-    }
-
-    return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Unexpected error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
