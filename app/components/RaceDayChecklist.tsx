@@ -81,6 +81,14 @@ export default function RaceDayChecklist() {
 
   const isMasterView = !selectedAthlete;
 
+  // Athletes not racing the 70.3 - exclude from checklist dropdown
+  const NON_RACING_ATHLETE_IDS = new Set([
+    'a0a7f08b-9c8c-4826-ac5a-f76495a1ab77', // Alexander Bedard
+    '7915b0e1-47a9-47bc-8e52-3eb58569a257', // Matt Fox
+    '479c0fc9-f851-4a13-8147-9aee71b6a278', // James Manley
+    '4ce682a4-dd06-4266-aeca-91a216ab9d3d', // Taylor Travers
+  ]);
+
   // Fetch athletes for the dropdown
   useEffect(() => {
     async function fetchAthletes() {
@@ -88,11 +96,13 @@ export default function RaceDayChecklist() {
         const res = await fetch('/api/leaderboard');
         const data = await res.json();
         if (data.success) {
-          setAthletes(data.data.map((a: any) => ({
-            athlete_id: a.athlete_id,
-            firstname: a.firstname,
-            lastname: a.lastname,
-          })));
+          setAthletes(data.data
+            .filter((a: any) => !NON_RACING_ATHLETE_IDS.has(a.athlete_id))
+            .map((a: any) => ({
+              athlete_id: a.athlete_id,
+              firstname: a.firstname,
+              lastname: a.lastname,
+            })));
         }
       } catch (err) {
         console.error('Failed to fetch athletes:', err);
