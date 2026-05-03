@@ -58,6 +58,7 @@ export default function CompetitionProgress() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showProjections, setShowProjections] = useState(false);
+  const [now, setNow] = useState<number>(() => Date.now());
 
   useEffect(() => {
     async function fetchData() {
@@ -81,6 +82,18 @@ export default function CompetitionProgress() {
     fetchData();
   }, []);
 
+  // Tick every second only during the final 24 hours, so the live countdown
+  // stays accurate without re-rendering on quieter days.
+  useEffect(() => {
+    if (!data) return;
+    const endMs = new Date(data.competition.end_date).getTime();
+    const diff = endMs - Date.now();
+    if (diff <= 0 || diff > 24 * 60 * 60 * 1000) return;
+
+    const interval = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(interval);
+  }, [data]);
+
   if (loading) {
     return (
       <div className="card p-6 mb-10">
@@ -103,6 +116,20 @@ export default function CompetitionProgress() {
   const startDate = new Date(competition.start_date);
   const endDate = new Date(competition.end_date);
   const formatDate = (date: Date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  // Live countdown to midnight Eastern. endDate is a UTC instant
+  // (2026-05-04T03:59:59Z = 11:59:59 PM EDT on May 3), so a plain ms
+  // subtraction yields the correct remaining time in any viewer's timezone.
+  const remainingMs = endDate.getTime() - now;
+  const inFinalDay = remainingMs > 0 && remainingMs <= 24 * 60 * 60 * 1000;
+  const justEndedClientSide = !timeline.has_ended && remainingMs <= 0;
+  const formatCountdown = (ms: number) => {
+    const totalSec = Math.max(0, Math.floor(ms / 1000));
+    const h = String(Math.floor(totalSec / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSec % 3600) / 60)).padStart(2, '0');
+    const s = String(totalSec % 60).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
 
   return (
     <div className="card p-4 sm:p-6 mb-10">
@@ -149,13 +176,22 @@ export default function CompetitionProgress() {
                 Days Until Start
               </div>
             </>
-          ) : timeline.has_ended ? (
+          ) : timeline.has_ended || justEndedClientSide ? (
             <>
               <div className="text-3xl sm:text-4xl font-display text-muted mb-2">
                 Complete
               </div>
               <div className="text-xs sm:text-sm text-muted font-body uppercase tracking-wider">
                 Competition Ended
+              </div>
+            </>
+          ) : inFinalDay ? (
+            <>
+              <div className="text-3xl sm:text-5xl font-display gradient-text mb-2 tabular-nums">
+                {formatCountdown(remainingMs)}
+              </div>
+              <div className="text-xs sm:text-sm text-muted font-body uppercase tracking-wider">
+                Until Midnight Eastern
               </div>
             </>
           ) : (

@@ -17,12 +17,13 @@ VALUES (
   true
 );
 
--- Insert Main Competition Period (Jan 1 - May 3, 2026)
+-- Insert Main Competition Period (Jan 1 - May 3, 2026, midnight Eastern)
+-- end_date is 2026-05-04T03:59:59Z = 11:59:59 PM EDT on May 3 (DST in effect).
 INSERT INTO competition_config (name, start_date, end_date, is_active)
 VALUES (
   'Ironman 70.3 Training Championship',
   '2026-01-01T00:00:00Z',
-  '2026-05-03T23:59:59Z',
+  '2026-05-04T03:59:59Z',
   true
 );
 
