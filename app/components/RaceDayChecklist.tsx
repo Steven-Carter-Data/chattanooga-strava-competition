@@ -78,6 +78,7 @@ export default function RaceDayChecklist() {
   const [newItemText, setNewItemText] = useState('');
   const [savingItem, setSavingItem] = useState(false);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(new Set(CATEGORIES.map(c => c.key)));
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
 
   const isMasterView = !selectedAthlete;
 
@@ -238,6 +239,129 @@ export default function RaceDayChecklist() {
     }
   }
 
+  async function handleDownloadPdf() {
+    if (downloadingPdf) return;
+    setDownloadingPdf(true);
+    try {
+      const { jsPDF } = await import('jspdf');
+      const doc = new jsPDF({ unit: 'pt', format: 'letter' });
+
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      const margin = 50;
+      const contentWidth = pageWidth - margin * 2;
+      const checkBoxSize = 10;
+      const lineHeight = 14;
+      let y = margin;
+
+      const ensureSpace = (needed: number) => {
+        if (y + needed > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+      };
+
+      // Title
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(18);
+      doc.text('Bourbon Chasers Race Day Checklist', margin, y);
+      y += 22;
+
+      // Subtitle: master vs personal
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
+      const subtitle = isMasterView
+        ? 'Master List'
+        : `${selectedAthleteName?.firstname ?? ''} ${selectedAthleteName?.lastname ?? ''}`.trim() + "'s List";
+      doc.text(subtitle, margin, y);
+      y += 16;
+
+      // Generated timestamp
+      doc.setFontSize(9);
+      doc.setTextColor(120);
+      doc.text(
+        `Generated ${new Date().toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })}`,
+        margin,
+        y
+      );
+      doc.setTextColor(0);
+      y += 18;
+
+      // Categories
+      for (const cat of CATEGORIES) {
+        const allCatItems = checklist[cat.key] || [];
+        const activeCatItems = allCatItems.filter(i => !i.dismissed);
+        const dismissedCatItems = allCatItems.filter(i => i.dismissed);
+        const itemsToRender = isMasterView ? allCatItems : activeCatItems;
+
+        // Skip empty categories entirely
+        if (itemsToRender.length === 0 && (isMasterView || dismissedCatItems.length === 0)) continue;
+
+        ensureSpace(40);
+
+        // Category heading
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text(cat.label, margin, y);
+        y += lineHeight + 4;
+
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(11);
+
+        for (const item of itemsToRender) {
+          const textX = margin + checkBoxSize + 6;
+          const lines = doc.splitTextToSize(item.item_text, contentWidth - checkBoxSize - 6);
+          const blockHeight = Math.max(lineHeight, lines.length * lineHeight);
+          ensureSpace(blockHeight + 2);
+
+          // Checkbox
+          const boxY = y - 9;
+          doc.setLineWidth(0.7);
+          doc.rect(margin, boxY, checkBoxSize, checkBoxSize);
+
+          // Checkmark for already-packed items in personal view
+          if (!isMasterView && item.checked) {
+            doc.setLineWidth(1);
+            doc.line(margin + 1.5, boxY + 1.5, margin + checkBoxSize - 1.5, boxY + checkBoxSize - 1.5);
+            doc.line(margin + checkBoxSize - 1.5, boxY + 1.5, margin + 1.5, boxY + checkBoxSize - 1.5);
+          }
+
+          doc.text(lines, textX, y);
+          y += blockHeight + 2;
+        }
+
+        // Skipped items (personal view only)
+        if (!isMasterView && dismissedCatItems.length > 0) {
+          ensureSpace(20);
+          doc.setFont('helvetica', 'italic');
+          doc.setFontSize(10);
+          doc.setTextColor(140);
+          doc.text(`Skipped (${dismissedCatItems.length})`, margin, y);
+          y += lineHeight;
+          doc.setFont('helvetica', 'normal');
+          for (const item of dismissedCatItems) {
+            const lines = doc.splitTextToSize(`— ${item.item_text}`, contentWidth);
+            ensureSpace(lines.length * lineHeight);
+            doc.text(lines, margin, y);
+            y += lines.length * lineHeight;
+          }
+          doc.setTextColor(0);
+        }
+
+        y += 10;
+      }
+
+      const slug = isMasterView
+        ? 'master'
+        : (selectedAthleteName?.firstname || 'athlete').toLowerCase().replace(/[^a-z0-9]/g, '-');
+      doc.save(`bourbon-chasers-${slug}-checklist.pdf`);
+    } catch (err) {
+      console.error('Failed to generate PDF:', err);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  }
+
   function toggleCategory(key: string) {
     setExpandedCategories(prev => {
       const next = new Set(prev);
@@ -330,6 +454,19 @@ export default function RaceDayChecklist() {
             {dismissedItems.length > 0 && ` · ${dismissedItems.length} skipped`}
           </span>
         )}
+
+        {/* Download PDF */}
+        <button
+          onClick={handleDownloadPdf}
+          disabled={downloadingPdf || loading || allItems.length === 0}
+          className="sm:ml-auto flex items-center gap-2 px-3 py-1.5 bg-gold/10 border border-gold/30 text-gold text-xs font-body uppercase tracking-wider rounded hover:bg-gold/20 hover:border-gold/50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          title={isMasterView ? 'Download the master checklist as a PDF' : 'Download your personal checklist as a PDF'}
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+          </svg>
+          {downloadingPdf ? 'Generating...' : 'Download PDF'}
+        </button>
       </div>
 
       {/* Progress Bar (personal view only) */}
